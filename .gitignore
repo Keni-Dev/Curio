@@ -1,0 +1,11 @@
+# Dependency directories
+node_modules/
+
+# Environment variables (Never upload passwords!)
+.env
+.DS_Store
+
+# Build outputs
+dist/
+build/
+coverage/
