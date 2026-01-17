@@ -1,0 +1,7 @@
+{
+  "pharmacies": [
+    { "id": 1, "name": "Mercury Drug Malolos", "lat": 14.843, "lng": 120.811, "stock": "High" },
+    { "id": 2, "name": "Watsons Crossing", "lat": 14.850, "lng": 120.815, "stock": "Low" },
+    { "id": 3, "name": "St. Mary Pharmacy", "lat": 14.857, "lng": 120.820, "stock": "Out of Stock" }
+  ]
+}
