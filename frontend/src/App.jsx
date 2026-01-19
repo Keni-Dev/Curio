@@ -1,33 +1,45 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useState, useEffect } from 'react'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+
+  const [pharmacies, setPharmacies] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:3000/api/pharmacies")
+      .then(res => res.json())
+      .then(data => setPharmacies(data))
+      .catch(err => console.log(err))
+  }, []
+  )
+
+  // GET /api/pharmacies
+
+  // GET /api/pharmacies/nearby 
+
+  // GET /api/search
+
+  // POST /api/report
+
+  // POST /api/ai/ocr
 
   return (
     <>
+      <h1>Curio</h1>
       <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <div>
+          Pharmacies
+        </div>
+        <div>
+          List Pharmacies:
+          {Array.isArray(pharmacies) && pharmacies.map(pharmacy => (
+            <div key={pharmacy.id}>
+              <h2>{pharmacy.name}</h2>
+              <p>Stock: {pharmacy.stock}</p>
+            </div>
+          ))}
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
   )
 }

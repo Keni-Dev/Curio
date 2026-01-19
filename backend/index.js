@@ -2,14 +2,17 @@ import express, { json } from 'express';
 import { readFileSync } from 'fs';
 import { isPointWithinRadius } from 'geolib';
 
+import cors from 'cors';
+
 const app = express();
 const port = process.env.PORT || 3000;
 
-const DATA_FILE = JSON.parse(readFileSync('database/database.json', 'utf8'));
-
-
+app.use(cors());
 // Middleware to parse JSON requests
 app.use(json());
+
+const DATA_FILE = JSON.parse(readFileSync('database/database.json', 'utf8'));
+
 
 // Sample route
 app.get('/', (req, res) => {
@@ -20,14 +23,14 @@ app.get('/', (req, res) => {
 app.get('/api/pharmacies', (req, res) => {
   // Logic to fetch and return a list of pharmacies
 
-  res.json({ message: DATA_FILE });
+  res.json(DATA_FILE.pharmacies);
 });
 
 // GET /api/pharmacies/nearby 
 app.get('/api/pharmacies/nearby', (req, res) => {
   // Logic to fetch and return a list of pharmacies
 
-  // step 1 get user location J
+  // step 1 get user location 
   const userLocation = req.query.location;
   if (!userLocation) return res.status(400).json({ message: 'User location is required' });
   const [userLat, userLng] = userLocation.split(',');
@@ -46,30 +49,32 @@ app.get('/api/pharmacies/nearby', (req, res) => {
 
 
   // return pharmacies
-
-  res.json({ message: DATA_FILE, nearbyPharmacies: nearbyPharmacies });
+  res.json(nearbyPharmacies);
 });
 
 
 // GET /api/search
 app.get('/api/search', (req, res) => {
-  // Logic to fetch and return a list of pharmacies
+  // Logic to search pharmacies
+  const query = req.query.q?.toLowerCase();
+  if (!query) return res.json(DATA_FILE.pharmacies);
 
-  res.json({ message: DATA_FILE });
+  const results = DATA_FILE.pharmacies.filter(p =>
+    p.name.toLowerCase().includes(query)
+  );
+  res.json(results);
 });
 
 // POST /api/report
 app.post('/api/report', (req, res) => {
-  // Logic to fetch and return a list of pharmacies
-
-  res.json({ message: DATA_FILE });
+  // Logic to report stock
+  res.json({ success: true, message: 'Report submitted' });
 });
 
 // POST /api/ai/ocr
 app.post('/api/ai/ocr', (req, res) => {
-  // Logic to fetch and return a list of pharmacies
-
-  res.json({ message: DATA_FILE });
+  // Logic for OCR
+  res.json({ success: true, text: 'Sample OCR text' });
 });
 
 
