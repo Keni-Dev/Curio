@@ -1,0 +1,53 @@
+.hook-section {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #FFFFFF;
+    padding: 20px;
+    text-align: center;
+    position: relative; /* Important for absolute positioning */
+}
+
+.hook-section img {
+    width: 300px;
+    height: auto;
+    margin-bottom: 30px;
+    z-index: 1; 
+}
+
+.hook-text {
+    margin-top: 20px;
+    position: relative;
+    z-index: 2; /* Above image */
+}
+
+.hook-text h1 {
+    font-size: 1.75rem;
+    color: #486ca7;
+    max-width: 800px;
+}
+
+.hook-text p {
+    font-size: 0.75rem;
+    color: #666;
+    max-width: 600px;
+    margin: 0 auto 30px;
+    line-height: 1.6;
+}
+
+.get-started-button {
+    display: inline-block;
+    padding: 12px 40px;
+    background: #5CB85C;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    transition: background 0.3s ease;
+}
+
+.get-started-button:hover {
+    background: #4A9D4A;
+}

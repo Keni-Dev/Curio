@@ -1,0 +1,24 @@
+/* frontend/src/components/Map.css */
+
+.map-container {
+  width: 100%;
+  height: 600px;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  margin: 20px 0;
+}
+
+.leaflet-map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Make the map look nicer */
+.leaflet-popup-content-wrapper {
+  border-radius: 10px;
+}
+
+.leaflet-popup-content {
+  margin: 10px 15px;
+}

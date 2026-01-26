@@ -1,0 +1,44 @@
+
+.medicine-bar {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 20px 0;
+}
+
+.med-bar-h2 {
+    font-size: 28px;
+    color: #202124;
+    margin: 0 0 20px 20px;
+    font-weight: 500;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.medicine-cards-container {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    gap: 16px;
+    padding: 0 20px;
+    scroll-snap-type: x mandatory;
+}
+
+/* Hide scrollbar but keep functionality */
+.medicine-cards-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.medicine-cards-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.medicine-cards-container::-webkit-scrollbar-thumb {
+    background: #dfe1e5;
+    border-radius: 4px;
+}
+
+.medicine-cards-container::-webkit-scrollbar-thumb:hover {
+    background: #bdc1c6;
+}

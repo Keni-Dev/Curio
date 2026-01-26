@@ -1,0 +1,48 @@
+/* Style the scrollbar for the medicine list */
+.med-list::-webkit-scrollbar {
+    width: 5px; /* Width of the scrollbar */
+}
+
+.med-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.454); /* Track color */
+    border-radius: 10px;
+}
+
+.med-list::-webkit-scrollbar-thumb {
+    background: rgb(255, 255, 255); /* Green thumb to match your theme */
+    border-radius: 10px;
+    width: 10px;
+}
+
+.med-list::-webkit-scrollbar-thumb:hover {
+    background: #45a049; /* Darker green on hover */
+}
+
+.container2 {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Hide navbar initially */
+.navbar {
+  position: fixed;
+  top: -80px; /* Hidden above viewport */
+  transition: top 0.3s ease;
+}
+
+/* Show when scrolled */
+.navbar.scrolled {
+  top: 0;
+}
+
+.About-homepage {
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+    width: 100%;
+    background-color: #f9f9f9;
+    height: fit-content;
+    box-sizing: border-box;
+}
