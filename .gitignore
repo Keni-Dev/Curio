@@ -1,11 +1,6 @@
-# Dependency directories
-node_modules/
-
-# Environment variables (Never upload passwords!)
-.env
-.DS_Store
-
-# Build outputs
-dist/
-build/
-coverage/
+references/
+prompts/
+.agent/
+PROMPT.md
+agent.md
+DESIGN_PROTOTYPE.md

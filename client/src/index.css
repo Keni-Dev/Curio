@@ -1,0 +1,301 @@
+/* =============================================================================
+   Tailwind CSS - v3 Directives
+   ============================================================================= */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =============================================================================
+   Base Styles - from DESIGN_SYSTEM.md
+   ============================================================================= */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+  font-family: 'Noto Sans', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Light mode (default) */
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #F6F8F8;
+  color: #0E1B1A;
+}
+
+/* Dark mode */
+.dark body {
+  background-color: #112120;
+  color: #FFFFFF;
+}
+
+/* Selection colors */
+::selection {
+  background-color: #13ECDA;
+  color: #115E59;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Focus styles for accessibility - from DESIGN_SYSTEM.md */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #0F766E;
+  outline-offset: 2px;
+}
+
+/* Remove default button styles */
+button {
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* Touch target minimum (44x44px) - from DESIGN_SYSTEM.md */
+button,
+a {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+
+/* =============================================================================
+   Utility Classes - from DESIGN_SYSTEM.md
+   ============================================================================= */
+
+/* Glass Panel Effect */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-panel {
+  background: rgba(17, 33, 32, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Touch feedback */
+.touch-feedback {
+  transition: all 0.2s;
+}
+
+.touch-feedback:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* Safe area padding for mobile - from DESIGN_SYSTEM.md */
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Map overlay gradient */
+.map-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(248, 250, 252, 0.9) 0%,
+    transparent 100%
+  );
+}
+
+.dark .map-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(17, 33, 32, 0.9) 0%,
+    transparent 100%
+  );
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar,
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Accessibility - Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* =============================================================================
+   Map Marker Styles - Custom Leaflet marker styling
+   ============================================================================= */
+
+/* Reset Leaflet default marker styles */
+.pharmacy-marker,
+.user-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Pharmacy marker container */
+.pharmacy-marker-container {
+  animation: marker-appear 0.3s ease-out;
+}
+
+@keyframes marker-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Pharmacy marker pill hover effect */
+.pharmacy-marker-pill {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pharmacy-marker-container:hover .pharmacy-marker-pill {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* User location marker */
+.user-location-marker {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-location-dot {
+  width: 14px;
+  height: 14px;
+  background-color: #3B82F6;
+  border: 3px solid #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  z-index: 2;
+  position: relative;
+}
+
+.user-location-pulse {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background-color: rgba(59, 130, 246, 0.2);
+  border-radius: 50%;
+  animation: user-pulse 2s ease-out infinite;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes user-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+/* Pharmacy popup styling */
+.pharmacy-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.pharmacy-popup .leaflet-popup-content {
+  margin: 0;
+  padding: 12px;
+  min-width: 240px;
+}
+
+.pharmacy-popup .leaflet-popup-tip {
+  display: none;
+}
+
+/* Leaflet attribution styling */
+.leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* Leaflet container styling */
+.leaflet-container {
+  font-family: 'Noto Sans', sans-serif;
+}
+
