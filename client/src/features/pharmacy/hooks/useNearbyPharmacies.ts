@@ -53,10 +53,16 @@ interface UseNearbyPharmaciesReturn {
 // QUERY KEY FACTORY
 // =============================================================================
 
+/**
+ * Round coordinates to reduce query key changes on minor map movements
+ * ~0.01 degrees ≈ 1km, so we round to 2 decimal places
+ */
+const roundCoord = (coord: number): number => Math.round(coord * 100) / 100;
+
 export const pharmacyKeys = {
   all: ['pharmacies'] as const,
   nearby: (lat: number, lng: number, radius: number) =>
-    [...pharmacyKeys.all, 'nearby', { lat, lng, radius }] as const,
+    [...pharmacyKeys.all, 'nearby', { lat: roundCoord(lat), lng: roundCoord(lng), radius }] as const,
   detail: (id: string) => [...pharmacyKeys.all, 'detail', id] as const,
   stock: (pharmacyId: string) =>
     [...pharmacyKeys.all, 'stock', pharmacyId] as const,
@@ -158,9 +164,10 @@ export function useNearbyPharmacies(
     queryKey: pharmacyKeys.nearby(center.lat, center.lng, radiusMeters),
     queryFn: () => fetchNearbyPharmacies(center, radiusMeters),
     enabled,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-    gcTime: 1000 * 60 * 5, // 5 minutes (formerly cacheTime)
+    staleTime: 1000 * 60 * 5, // 5 minutes - keep data fresh longer
+    gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
     refetchOnWindowFocus: false,
+    refetchOnMount: false, // Don't refetch on component mount if data exists
     retry: 2,
   });
 

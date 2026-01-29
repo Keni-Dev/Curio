@@ -10,12 +10,16 @@
  */
 
 import React, { lazy, Suspense, useState, useCallback, useMemo } from 'react';
-import { cn, formatDistance } from '~lib/utils';
+import { Link } from 'react-router-dom';
+import { cn } from '~lib/utils';
 import { useMapStore } from '~stores/useMapStore';
-import { useNearbyPharmacies } from '~features/pharmacy/hooks/useNearbyPharmacies';
+import { useSearchStore } from '~stores/useSearchStore';
+import { useNearbyPharmacies, PharmacyCard as PharmacyCardNew, SelectedPharmacySheet } from '~features/pharmacy';
 import { Spinner } from '~components/ui';
+import { SearchBar } from '~components/search';
 import NavHeader from '~components/layout/NavHeader';
 import type { PharmacyWithStock, StockStatus } from '~types/pharmacy';
+import type { MedicineSearchResult } from '~types/database';
 
 // Lazy load map components (heavy bundle)
 const MapView = lazy(() => import('~components/map/MapView'));
@@ -31,23 +35,6 @@ interface FilterChipProps {
   onClick: () => void;
 }
 
-interface PharmacyCardProps {
-  pharmacy: PharmacyWithStock;
-  isSelected: boolean;
-  onClick: () => void;
-}
-
-// =============================================================================
-// STOCK STATUS CONFIG
-// =============================================================================
-
-const STOCK_LABELS: Record<StockStatus, string> = {
-  in_stock: 'In Stock',
-  low_stock: 'Low Stock',
-  out_of_stock: 'Out of Stock',
-  unknown: 'Unknown',
-};
-
 // =============================================================================
 // FILTER CHIP COMPONENT
 // =============================================================================
@@ -62,12 +49,12 @@ const FilterChip: React.FC<FilterChipProps> = ({
   // Other active filters use their respective colors
   const activeClasses: Record<StockStatus, string> = {
     in_stock: 'bg-primary text-white shadow-sm',
-    low_stock: 'bg-white/70 backdrop-blur-sm text-slate-700 border border-white/20',
-    out_of_stock: 'bg-white/70 backdrop-blur-sm text-slate-700 border border-white/20',
-    unknown: 'bg-white/70 backdrop-blur-sm text-slate-700 border border-white/20',
+    low_stock: 'bg-white/60 backdrop-blur-sm text-slate-700 border border-white/15',
+    out_of_stock: 'bg-white/60 backdrop-blur-sm text-slate-700 border border-white/15',
+    unknown: 'bg-white/60 backdrop-blur-sm text-slate-700 border border-white/15',
   };
 
-  const inactiveClasses = 'bg-white/70 backdrop-blur-sm text-slate-700 border border-white/20 hover:bg-white/90';
+  const inactiveClasses = 'bg-white/60 backdrop-blur-sm text-slate-700 border border-white/15 hover:bg-white/80';
 
   return (
     <button
@@ -85,160 +72,6 @@ const FilterChip: React.FC<FilterChipProps> = ({
     </button>
   );
 };
-
-// =============================================================================
-// STOCK BADGE COMPONENT (inline for reference styling)
-// =============================================================================
-
-const StockBadgePill: React.FC<{ status: StockStatus }> = ({ status }) => {
-  // Explicit class mappings matching reference design with borders
-  const badgeClasses: Record<StockStatus, string> = {
-    in_stock: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
-    low_stock: 'bg-amber-100 text-amber-700 border border-amber-200',
-    out_of_stock: 'bg-rose-100 text-rose-700 border border-rose-200',
-    unknown: 'bg-slate-100 text-slate-600 border border-slate-200',
-  };
-
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold',
-        badgeClasses[status]
-      )}
-    >
-      {STOCK_LABELS[status]}
-    </span>
-  );
-};
-
-// =============================================================================
-// PHARMACY CARD COMPONENT
-// =============================================================================
-
-const PharmacyCard: React.FC<PharmacyCardProps> = ({
-  pharmacy,
-  isSelected,
-  onClick,
-}) => {
-  const timeAgo = pharmacy.lastReportedAt
-    ? getTimeAgo(pharmacy.lastReportedAt)
-    : null;
-
-  return (
-    <div
-      onClick={onClick}
-      className={cn(
-        'p-4 rounded-2xl cursor-pointer transition-all duration-200 group',
-        isSelected
-          ? 'bg-white shadow-md'
-          : 'bg-white/80 hover:bg-white'
-      )}
-    >
-      {/* Header Row */}
-      <div className="flex items-start justify-between gap-3 mb-2">
-        {/* Left: Logo + Info */}
-        <div className="flex gap-3 flex-1 min-w-0">
-          {/* Pharmacy Logo */}
-          <div className="size-10 rounded-full bg-slate-100 shrink-0 flex items-center justify-center overflow-hidden">
-            {pharmacy.logoUrl ? (
-              <img
-                src={pharmacy.logoUrl}
-                alt={pharmacy.name}
-                className="size-full object-cover"
-              />
-            ) : (
-              <span className="text-lg">💊</span>
-            )}
-          </div>
-
-          {/* Pharmacy Info */}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-slate-800 truncate group-hover:text-primary transition-colors">
-              {pharmacy.name}
-            </h3>
-            <p className="text-xs text-slate-500">
-              {pharmacy.distance ? formatDistance(pharmacy.distance) : ''} •{' '}
-              {pharmacy.is24Hours ? 'Open 24 Hours' : 'Varies'}
-            </p>
-          </div>
-        </div>
-
-        {/* Right: Stock Badge */}
-        <StockBadgePill status={pharmacy.stockStatus} />
-      </div>
-
-      {/* Content below header - indented to align with text */}
-      <div className="pl-[3.25rem]">
-        {/* Freshness Indicator */}
-        {timeAgo && (
-          <div className="flex items-center gap-1 text-slate-400 text-xs mb-2">
-            <span className="material-symbols-outlined text-[14px]">schedule</span>
-            <span>Updated {timeAgo}</span>
-          </div>
-        )}
-
-        {/* Medicine Info */}
-        <p className="text-sm font-medium text-slate-600 truncate">
-          Biogesic Paracetamol 500mg
-        </p>
-
-        {/* Action Buttons - Show on selected */}
-        {isSelected && (
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (pharmacy.phone) {
-                  window.location.href = `tel:${pharmacy.phone}`;
-                }
-              }}
-              className="flex-1 h-9 rounded-xl bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90 transition-colors"
-            >
-              Call
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const url = `https://www.google.com/maps/dir/?api=1&destination=${pharmacy.location.lat},${pharmacy.location.lng}`;
-                window.open(url, '_blank');
-              }}
-              className="flex-1 h-9 rounded-xl bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200 transition-colors"
-            >
-              Directions
-            </button>
-          </div>
-        )}
-
-        {/* Verified Badge */}
-        {pharmacy.isVerified && (
-          <div className="flex items-center gap-1 text-teal-600 text-xs mt-2">
-            <span className="material-symbols-outlined text-[14px]">verified</span>
-            <span>Verified Pharmacy</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-function getTimeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins} mins ago`;
-  if (diffHours < 24) return `${diffHours} hour ago`;
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return date.toLocaleDateString();
-}
 
 // =============================================================================
 // MAP LOADING FALLBACK
@@ -260,6 +93,11 @@ const MapLoadingFallback: React.FC = () => (
 // =============================================================================
 
 const HomePage: React.FC = () => {
+  // Search state from store (for selected medicine)
+  const selectedMedicine = useSearchStore((s) => s.selectedMedicine);
+  const selectMedicine = useSearchStore((s) => s.selectMedicine);
+
+  // Local search query for pharmacy name filtering
   const [searchQuery, setSearchQuery] = useState('');
 
   // Store
@@ -337,29 +175,39 @@ const HomePage: React.FC = () => {
         <div className="flex-1 flex overflow-hidden max-w-[1440px] mx-auto w-full px-4 pb-4 gap-4 pointer-events-none">
           {/* Left Sidebar Floating Panel - Desktop */}
           <aside className="w-full max-w-[400px] hidden md:flex flex-col gap-4 pointer-events-auto h-full pb-2">
-            {/* Search Bar Floating - Glass Panel */}
-            <div
-              className={cn(
-                'rounded-full p-1.5 flex items-center',
-                'bg-white/60 backdrop-blur-xl',
-                'border border-white/20',
-                'shadow-[0_8px_32px_0_rgba(31,38,135,0.1)]'
-              )}
-            >
-              <div className="size-11 flex items-center justify-center rounded-full bg-primary/10 text-primary ml-1">
-                <span className="material-symbols-outlined">search</span>
+            {/* Medicine Search Bar with Voice Search & Autocomplete */}
+            <SearchBar
+              onSelect={(medicine: MedicineSearchResult) => {
+                selectMedicine(medicine);
+                // Update search query to filter pharmacies by medicine
+                setSearchQuery(medicine.brand_name || medicine.generic_name);
+              }}
+              placeholder="Maghanap ng gamot..."
+            />
+
+            {/* Selected Medicine Indicator */}
+            {selectedMedicine && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-xl border border-primary/20">
+                <span className="material-symbols-outlined text-primary text-lg">medication</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-primary truncate">
+                    {selectedMedicine.brand_name || selectedMedicine.generic_name}
+                  </p>
+                  {selectedMedicine.brand_name && (
+                    <p className="text-xs text-muted truncate">{selectedMedicine.generic_name}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    selectMedicine(null);
+                    setSearchQuery('');
+                  }}
+                  className="size-6 flex items-center justify-center rounded-full hover:bg-primary/20 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-primary text-sm">close</span>
+                </button>
               </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Maghanap ng gamot..."
-                className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-slate-800 placeholder:text-slate-400 font-medium h-11 px-3 text-base"
-              />
-              <button className="size-11 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors mr-1">
-                <span className="material-symbols-outlined text-slate-500">tune</span>
-              </button>
-            </div>
+            )}
 
             {/* Filter Chips */}
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 px-1">
@@ -387,9 +235,9 @@ const HomePage: React.FC = () => {
             <div
               className={cn(
                 'flex-1 rounded-[2rem] flex flex-col overflow-hidden min-h-0',
-                'bg-white/60 backdrop-blur-xl',
-                'border border-white/20',
-                'shadow-[0_8px_32px_0_rgba(31,38,135,0.1)]'
+                'bg-white/50 backdrop-blur-xl',
+                'border border-white/15',
+                'shadow-[0_8px_32px_0_rgba(31,38,135,0.08)]'
               )}
             >
               {/* Handle/Header */}
@@ -433,11 +281,13 @@ const HomePage: React.FC = () => {
                   </div>
                 ) : (
                   filteredPharmacies.map((pharmacy) => (
-                    <PharmacyCard
+                    <PharmacyCardNew
                       key={pharmacy.id}
                       pharmacy={pharmacy}
-                      isSelected={selectedPharmacyId === pharmacy.id}
+                      showDistance={true}
+                      compact={false}
                       onClick={() => handleCardClick(pharmacy)}
+                      className={selectedPharmacyId === pharmacy.id ? 'ring-2 ring-primary' : ''}
                     />
                   ))
                 )}
@@ -447,11 +297,25 @@ const HomePage: React.FC = () => {
 
           {/* Map Controls (Floating Right) */}
           <div className="flex-col gap-3 ml-auto hidden md:flex pointer-events-auto pt-4">
+            {/* Scanner FAB - Desktop */}
+            <Link
+              to="/scanner"
+              className={cn(
+                'size-14 rounded-full flex items-center justify-center',
+                'bg-accent hover:bg-accent-hover',
+                'shadow-lg shadow-accent/30',
+                'text-white transition-all hover:scale-105'
+              )}
+              title="Scan Prescription"
+            >
+              <span className="material-symbols-outlined text-[28px]">document_scanner</span>
+            </Link>
+            <div className="h-2" /> {/* Spacer */}
             <button
               className={cn(
                 'size-12 rounded-full flex items-center justify-center',
-                'bg-white/60 backdrop-blur-xl border border-white/20',
-                'shadow-[0_8px_32px_0_rgba(31,38,135,0.1)]',
+                'bg-white/50 backdrop-blur-xl border border-white/15',
+                'shadow-[0_8px_32px_0_rgba(31,38,135,0.08)]',
                 'text-slate-700 hover:bg-white transition-colors'
               )}
               title="My Location"
@@ -461,8 +325,8 @@ const HomePage: React.FC = () => {
             <button
               className={cn(
                 'size-12 rounded-full flex items-center justify-center',
-                'bg-white/60 backdrop-blur-xl border border-white/20',
-                'shadow-[0_8px_32px_0_rgba(31,38,135,0.1)]',
+                'bg-white/50 backdrop-blur-xl border border-white/15',
+                'shadow-[0_8px_32px_0_rgba(31,38,135,0.08)]',
                 'text-slate-700 hover:bg-white transition-colors'
               )}
               title="Zoom In"
@@ -472,8 +336,8 @@ const HomePage: React.FC = () => {
             <button
               className={cn(
                 'size-12 rounded-full flex items-center justify-center',
-                'bg-white/60 backdrop-blur-xl border border-white/20',
-                'shadow-[0_8px_32px_0_rgba(31,38,135,0.1)]',
+                'bg-white/50 backdrop-blur-xl border border-white/15',
+                'shadow-[0_8px_32px_0_rgba(31,38,135,0.08)]',
                 'text-slate-700 hover:bg-white transition-colors'
               )}
               title="Zoom Out"
@@ -486,6 +350,20 @@ const HomePage: React.FC = () => {
 
       {/* Mobile Bottom Sheet */}
       <div className="md:hidden absolute bottom-0 left-0 right-0 z-10 pointer-events-auto">
+        {/* Mobile Scanner FAB */}
+        <Link
+          to="/scanner"
+          className={cn(
+            'absolute -top-20 right-4 size-14 rounded-full',
+            'flex items-center justify-center',
+            'bg-accent hover:bg-accent-hover',
+            'shadow-lg shadow-accent/30',
+            'text-white transition-all active:scale-95'
+          )}
+        >
+          <span className="material-symbols-outlined text-[28px]">document_scanner</span>
+        </Link>
+
         {/* Drag Handle */}
         <div className="flex justify-center py-2 bg-white rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
           <div className="w-10 h-1 bg-slate-300 rounded-full" />
@@ -495,23 +373,34 @@ const HomePage: React.FC = () => {
         <div className="bg-white max-h-[60vh] overflow-hidden">
           {/* Search Header */}
           <div className="p-4 border-b border-slate-100">
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-[20px] text-slate-400">
-                search
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Maghanap ng gamot..."
-                className={cn(
-                  'w-full pl-12 pr-4 py-3 rounded-xl',
-                  'bg-slate-50 border border-slate-200',
-                  'text-sm placeholder:text-slate-400',
-                  'focus:outline-none focus:ring-2 focus:ring-primary/20'
-                )}
-              />
-            </div>
+            <SearchBar
+              onSelect={(medicine: MedicineSearchResult) => {
+                selectMedicine(medicine);
+                setSearchQuery(medicine.brand_name || medicine.generic_name);
+              }}
+              placeholder="Maghanap ng gamot..."
+            />
+
+            {/* Selected Medicine Indicator - Mobile */}
+            {selectedMedicine && (
+              <div className="flex items-center gap-2 px-3 py-2 mt-3 bg-primary/10 rounded-xl border border-primary/20">
+                <span className="material-symbols-outlined text-primary text-lg">medication</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-primary truncate">
+                    {selectedMedicine.brand_name || selectedMedicine.generic_name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    selectMedicine(null);
+                    setSearchQuery('');
+                  }}
+                  className="size-6 flex items-center justify-center rounded-full hover:bg-primary/20 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-primary text-sm">close</span>
+                </button>
+              </div>
+            )}
 
             {/* Mobile Filters */}
             <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide pb-1">
@@ -555,17 +444,22 @@ const HomePage: React.FC = () => {
               </p>
             ) : (
               filteredPharmacies.slice(0, 5).map((pharmacy) => (
-                <PharmacyCard
+                <PharmacyCardNew
                   key={pharmacy.id}
                   pharmacy={pharmacy}
-                  isSelected={selectedPharmacyId === pharmacy.id}
+                  showDistance={true}
+                  compact={true}
                   onClick={() => handleCardClick(pharmacy)}
+                  className={selectedPharmacyId === pharmacy.id ? 'ring-2 ring-primary' : ''}
                 />
               ))
             )}
           </div>
         </div>
       </div>
+
+      {/* Selected Pharmacy Bottom Sheet */}
+      <SelectedPharmacySheet />
     </div>
   );
 };

@@ -142,6 +142,57 @@ export function subscribeToPharmacyStock(
 }
 
 // ============================================================================
+// VOTE SUBSCRIPTION
+// ============================================================================
+
+type VoteChangeHandler = (payload: {
+  reportId: string;
+  helpfulCount: number;
+  notHelpfulCount: number;
+}) => void;
+
+/**
+ * Subscribe to helpful vote updates for a specific report.
+ *
+ * @param reportId - The report ID to monitor votes for
+ * @param onUpdate - Callback when vote counts change
+ * @returns Cleanup function to unsubscribe
+ */
+export function subscribeToVotes(
+  reportId: string,
+  onUpdate: VoteChangeHandler
+): () => void {
+  const channel: RealtimeChannel = supabase
+    .channel(`report_votes_${reportId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'inventory_reports',
+        filter: `id=eq.${reportId}`,
+      },
+      (payload) => {
+        const newData = payload.new as {
+          id: string;
+          helpful_count: number;
+          not_helpful_count: number;
+        };
+        onUpdate({
+          reportId: newData.id,
+          helpfulCount: newData.helpful_count,
+          notHelpfulCount: newData.not_helpful_count,
+        });
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 

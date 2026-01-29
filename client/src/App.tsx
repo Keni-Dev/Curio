@@ -1,12 +1,15 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { APP_CONFIG } from '~lib/constants'
 import { cn } from '~lib/utils'
 import { Spinner } from '~components/ui'
+import { PointsAnimationProvider, AchievementToastProvider } from '~features/alay'
 
 // Lazy load pages for bundle optimization
 const HomePage = lazy(() => import('~pages/HomePage'))
 const DesignSystemDemo = lazy(() => import('~pages/DesignSystemDemo'))
+const PharmacyPage = lazy(() => import('~pages/PharmacyPage'))
+const ProfilePage = lazy(() => import('~pages/ProfilePage'))
+const OcrScannerPage = lazy(() => import('~pages/OcrScannerPage'))
 
 // Loading fallback for lazy components
 const PageLoader = () => (
@@ -65,25 +68,32 @@ function NotFoundPage() {
 
 function App() {
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        {/* Main Map View */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/map" element={<HomePage />} />
+    <>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Main Map View */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/map" element={<HomePage />} />
 
-        {/* Design System Demo */}
-        <Route path="/design-system" element={<DesignSystemDemo />} />
+          {/* Design System Demo */}
+          <Route path="/design-system" element={<DesignSystemDemo />} />
 
-        {/* Placeholder routes - will be implemented */}
-        <Route path="/search" element={<PlaceholderPage title="Medicine Search" />} />
-        <Route path="/pharmacy/:id" element={<PlaceholderPage title="Pharmacy Details" />} />
-        <Route path="/profile" element={<PlaceholderPage title="Profile" />} />
-        <Route path="/contribute" element={<PlaceholderPage title="Contribute" />} />
+          {/* Placeholder routes - will be implemented */}
+          <Route path="/search" element={<PlaceholderPage title="Medicine Search" />} />
+          <Route path="/pharmacy/:slug" element={<PharmacyPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/contribute" element={<PlaceholderPage title="Contribute" />} />
+          <Route path="/scanner" element={<OcrScannerPage />} />
 
-        {/* 404 */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Suspense>
+          {/* 404 */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
+
+      {/* Global Gamification Providers */}
+      <PointsAnimationProvider />
+      <AchievementToastProvider />
+    </>
   )
 }
 
