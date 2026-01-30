@@ -70,8 +70,10 @@ async function searchMedicines(
       dosage: m.dosage,
       form: m.form as MedicineSearchResult['form'],
       category: m.category as MedicineSearchResult['category'],
+      tags: m.tags,
       requires_prescription: m.requires_prescription,
-      rank: m.rank,
+      description: m.description,
+      rank: m.rank ?? 0,
     }));
   }
 
