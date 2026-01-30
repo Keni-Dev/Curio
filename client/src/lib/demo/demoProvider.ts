@@ -113,7 +113,9 @@ export interface MedicineSearchResult {
   dosage: string | null;
   form: string | null;
   category: string | null;
+  tags: string[];
   requires_prescription: boolean;
+  description: string | null;
   rank?: number;
 }
 
@@ -135,8 +137,10 @@ export async function demoSearchMedicines(
     dosage: m.dosage,
     form: m.form,
     category: m.category,
+    tags: m.tags,
     requires_prescription: m.requires_prescription,
-    rank: m.rank,
+    description: m.description,
+    rank: m.rank ?? 0,
   }));
 }
 
