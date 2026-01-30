@@ -1,543 +1,500 @@
 /**
  * HomePage Component
  *
- * Main map view page with pharmacy finder.
- * Redesigned to match reference with:
- * - Top navigation header
- * - Light sidebar panel (not glass)
- * - Improved pharmacy cards with action buttons
- * - Clean filter chips
+ * Dashboard-style home screen prioritizing three main features:
+ * 1. Medicine Search - Hero section with prominent search bar
+ * 2. Reseta Reader (OCR Scanner) - Quick access card
+ * 3. Medi-Bot AI Assistant - Quick access card
+ *
+ * Design: Mobile-first with bold typography, glass morphism,
+ * and coral accent highlights per design system.
  */
 
-import React, { lazy, Suspense, useState, useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '~lib/utils';
+import { useAuthStore } from '~stores/useAuthStore';
+import { useSearchStore, selectRecentSearches } from '~stores/useSearchStore';
+import { useNearbyPharmacies, PharmacyCard } from '~features/pharmacy';
+import { Spinner } from '~components/ui';
 import { MAP_CONFIG } from '~lib/constants';
-import { useMapStore } from '~stores/useMapStore';
-import { useSearchStore } from '~stores/useSearchStore';
-import { useNearbyPharmacies, PharmacyCard as PharmacyCardNew, SelectedPharmacySheet } from '~features/pharmacy';
-import { ChatModal } from '~features/medi-bot';
-import { Spinner, BottomSheet, AccessibilityMenu } from '~components/ui';
-import { SearchBar } from '~components/search';
 import NavHeader from '~components/layout/NavHeader';
-import type { PharmacyWithStock, StockStatus } from '~types/pharmacy';
-import type { MedicineSearchResult } from '~types/database';
-
-// Lazy load map components (heavy bundle)
-const MapView = lazy(() => import('~components/map/MapView'));
 
 // =============================================================================
-// TYPES
+// CONSTANTS
 // =============================================================================
 
-interface FilterChipProps {
-  label: string;
-  status: StockStatus;
-  isActive: boolean;
-  onClick: () => void;
+/**
+ * Filipino greetings that rotate randomly
+ */
+const GREETINGS = [
+  'Mabuhay',
+  'Kumusta',
+  'Magandang araw',
+  'Maligayang pagdating',
+  'Masayang araw',
+  'Tuloy ka',
+] as const;
+
+/**
+ * Get a random greeting from the list
+ */
+function getRandomGreeting(): string {
+  const index = Math.floor(Math.random() * GREETINGS.length);
+  return GREETINGS[index] ?? 'Mabuhay';
 }
 
 // =============================================================================
-// FILTER CHIP COMPONENT
+// HERO SECTION WITH SEARCH
 // =============================================================================
 
-const FilterChip: React.FC<FilterChipProps> = ({
-  label,
-  status,
-  isActive,
-  onClick,
-}) => {
-  // Active filter shows checkmark and uses primary color for 'in_stock'
-  // Other active filters use their respective colors
-  const activeClasses: Record<StockStatus, string> = {
-    in_stock: 'bg-primary text-white shadow-sm',
-    low_stock: 'bg-white/60 backdrop-blur-sm text-slate-700 border border-white/15',
-    out_of_stock: 'bg-white/60 backdrop-blur-sm text-slate-700 border border-white/15',
-    unknown: 'bg-white/60 backdrop-blur-sm text-slate-700 border border-white/15',
+interface HeroSearchProps {
+  userName?: string;
+  onSearch: (query: string) => void;
+}
+
+const HeroSearch: React.FC<HeroSearchProps> = ({ userName, onSearch }) => {
+  const greeting = useMemo(() => getRandomGreeting(), []);
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      onSearch(searchQuery.trim());
+    }
   };
 
-  const inactiveClasses = 'bg-white/60 backdrop-blur-sm text-slate-700 border border-white/15 hover:bg-white/80';
-
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium',
-        'shadow-sm transition-all duration-200 whitespace-nowrap shrink-0',
-        isActive ? activeClasses[status] : inactiveClasses
+    <section className="text-center pt-8 pb-6 px-4">
+      {/* Personalized Greeting */}
+      {userName && (
+        <p className="text-sm font-medium text-primary mb-2 animate-fade-in">
+          {greeting}, {userName}! 👋
+        </p>
       )}
-    >
-      {isActive && (
-        <span className="material-symbols-outlined text-[18px]">check</span>
-      )}
-      {label}
-    </button>
+
+      {/* Hero Tagline */}
+      <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-800 dark:text-slate-100 mb-3 leading-tight">
+        Find the Cure,{' '}
+        <span className="italic text-primary">Faster</span>
+      </h1>
+
+      {/* Subtitle */}
+      <p className="text-base md:text-lg text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto">
+        Real-time crowdsourced medicine tracking.
+      </p>
+
+      {/* Search Bar */}
+      <form onSubmit={handleSubmit} className="relative max-w-lg mx-auto">
+        <div
+          className={cn(
+            'flex items-center gap-3 px-4 py-3',
+            'bg-white dark:bg-surface-dark rounded-full',
+            'border border-slate-200 dark:border-slate-700',
+            'shadow-lg shadow-slate-900/5 dark:shadow-black/20',
+            'focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary',
+            'transition-all duration-200'
+          )}
+        >
+          {/* Search Icon */}
+          <span className="material-symbols-outlined text-xl text-slate-400">
+            search
+          </span>
+
+          {/* Input */}
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search for medicine (e.g. Biogesic)"
+            className={cn(
+              'flex-1 bg-transparent border-none outline-none',
+              'text-base text-slate-700 dark:text-slate-200',
+              'placeholder:text-slate-400 dark:placeholder:text-slate-500',
+              'focus:ring-0 focus:border-none focus:outline-none'
+            )}
+          />
+
+          {/* Search Button - Coral Accent */}
+          <button
+            type="submit"
+            className={cn(
+              'size-10 rounded-full flex items-center justify-center shrink-0',
+              'bg-accent hover:bg-accent/90 text-white',
+              'transition-all duration-200',
+              'active:scale-95 hover:shadow-lg hover:shadow-accent/25'
+            )}
+            aria-label="Search"
+          >
+            <span className="material-symbols-outlined text-xl">
+              arrow_forward
+            </span>
+          </button>
+        </div>
+      </form>
+    </section>
   );
 };
 
 // =============================================================================
-// MAP LOADING FALLBACK
+// FEATURE CARD COMPONENT (Side-by-Side Layout)
 // =============================================================================
 
-const MapLoadingFallback: React.FC = () => (
-  <div className="h-full w-full bg-slate-100 flex items-center justify-center">
-    <div className="flex flex-col items-center gap-3">
-      <Spinner size="lg" />
-      <span className="text-sm font-medium text-text-secondary">
-        Loading map...
+interface FeatureCardProps {
+  icon: string;
+  title: string;
+  description: string;
+  to: string;
+  iconBgClass?: string;
+  iconColorClass?: string;
+}
+
+const FeatureCard: React.FC<FeatureCardProps> = ({
+  icon,
+  title,
+  description,
+  to,
+  iconBgClass = 'bg-primary/10',
+  iconColorClass = 'text-primary',
+}) => (
+  <Link
+    to={to}
+    className={cn(
+      'flex flex-col items-start p-4',
+      'bg-white dark:bg-surface-dark rounded-2xl',
+      'border border-slate-100 dark:border-slate-800',
+      'shadow-md shadow-slate-900/5 dark:shadow-black/20',
+      'transition-all duration-200',
+      'hover:shadow-lg hover:-translate-y-0.5',
+      'active:scale-[0.98]',
+      'min-h-[140px]'
+    )}
+  >
+    {/* Icon */}
+    <div
+      className={cn(
+        'size-12 rounded-xl flex items-center justify-center mb-3',
+        iconBgClass
+      )}
+    >
+      <span className={cn('material-symbols-outlined text-2xl', iconColorClass)}>
+        {icon}
       </span>
     </div>
-  </div>
+
+    {/* Title */}
+    <h3 className="font-display font-bold text-base text-slate-800 dark:text-slate-100 mb-1">
+      {title}
+    </h3>
+
+    {/* Description */}
+    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+      {description}
+    </p>
+  </Link>
 );
+
+// =============================================================================
+// QUICK ACTIONS SECTION
+// =============================================================================
+
+const QuickActionsSection: React.FC = () => (
+  <section className="px-4 mb-8">
+    <div className="grid grid-cols-2 gap-3 max-w-lg mx-auto">
+      {/* Scan Prescription */}
+      <FeatureCard
+        icon="document_scanner"
+        title="Scan Prescription"
+        description="Convert your reseta to digital tracker"
+        to="/scanner"
+        iconBgClass="bg-accent/10"
+        iconColorClass="text-accent"
+      />
+
+      {/* Ask Medi-Bot */}
+      <FeatureCard
+        icon="smart_toy"
+        title="Ask Medi-Bot"
+        description="Instant answers about your medication"
+        to="/chat"
+        iconBgClass="bg-primary/10"
+        iconColorClass="text-primary"
+      />
+    </div>
+  </section>
+);
+
+// =============================================================================
+// VIEW MAP CTA
+// =============================================================================
+
+const ViewMapCTA: React.FC = () => (
+  <section className="px-4 mb-8">
+    <Link
+      to="/map"
+      className={cn(
+        'flex items-center justify-between p-4',
+        'bg-gradient-to-r from-primary to-primary/80 rounded-2xl',
+        'shadow-lg shadow-primary/20',
+        'transition-all duration-200',
+        'hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5',
+        'active:scale-[0.98]',
+        'max-w-lg mx-auto'
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <div className="size-12 rounded-xl bg-white/20 flex items-center justify-center">
+          <span className="material-symbols-outlined text-2xl text-white">
+            map
+          </span>
+        </div>
+        <div>
+          <h3 className="font-display font-bold text-base text-white">
+            View Pharmacy Map
+          </h3>
+          <p className="text-xs text-white/80">
+            Find nearby pharmacies with stock info
+          </p>
+        </div>
+      </div>
+      <span className="material-symbols-outlined text-xl text-white/80">
+        arrow_forward
+      </span>
+    </Link>
+  </section>
+);
+
+// =============================================================================
+// RECENT SEARCHES SECTION
+// =============================================================================
+
+interface RecentSearchesSectionProps {
+  onSearchSelect: (query: string) => void;
+}
+
+const RecentSearchesSection: React.FC<RecentSearchesSectionProps> = ({
+  onSearchSelect,
+}) => {
+  const recentSearches = useSearchStore(selectRecentSearches);
+  const clearRecentSearches = useSearchStore((s) => s.clearRecentSearches);
+
+  if (recentSearches.length === 0) {
+    return null;
+  }
+
+  // Show only last 5 searches
+  const displayedSearches = recentSearches.slice(0, 5);
+
+  return (
+    <section className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-display font-semibold text-base text-slate-700 dark:text-slate-200">
+          Mga Kamakailan na Hinanap
+        </h2>
+        <button
+          onClick={clearRecentSearches}
+          className="text-xs font-medium text-primary hover:text-primary-dark transition-colors"
+        >
+          I-clear
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {displayedSearches.map((search) => (
+          <button
+            key={search.id}
+            onClick={() => onSearchSelect(search.query)}
+            className={cn(
+              'flex items-center gap-2 px-3 py-2',
+              'bg-white/60 dark:bg-surface-dark/60 rounded-full',
+              'border border-white/20 dark:border-white/10',
+              'text-sm font-medium text-slate-600 dark:text-slate-300',
+              'hover:bg-white dark:hover:bg-surface-dark',
+              'transition-all active:scale-95'
+            )}
+          >
+            <span className="material-symbols-outlined text-base text-slate-400">
+              schedule
+            </span>
+            {search.query}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+// =============================================================================
+// NEARBY PHARMACIES PREVIEW
+// =============================================================================
+
+const NearbyPharmaciesPreview: React.FC = () => {
+  // Fetch nearby pharmacies with default center
+  const { pharmacies, isLoading, isError } = useNearbyPharmacies({
+    center: MAP_CONFIG.DEFAULT_CENTER,
+    radiusMeters: 5000, // 5km radius
+  });
+
+  // Show only top 3 pharmacies
+  const previewPharmacies = useMemo(() => {
+    return pharmacies
+      .filter((p) => p.stockStatus === 'in_stock' || p.stockStatus === 'low_stock')
+      .slice(0, 3);
+  }, [pharmacies]);
+
+  return (
+    <section className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-display font-semibold text-base text-slate-700 dark:text-slate-200">
+          Mga Botika Malapit Sa'yo
+        </h2>
+        <Link
+          to="/map"
+          className="text-xs font-medium text-primary hover:text-primary-dark transition-colors flex items-center gap-1"
+        >
+          Tingnan lahat
+          <span className="material-symbols-outlined text-sm">arrow_forward</span>
+        </Link>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Spinner size="md" />
+        </div>
+      ) : isError ? (
+        <div className="text-center py-6">
+          <span className="material-symbols-outlined text-3xl text-rose-400 mb-2 block">
+            error
+          </span>
+          <p className="text-sm text-slate-500">Hindi ma-load ang mga botika</p>
+        </div>
+      ) : previewPharmacies.length === 0 ? (
+        <div className="text-center py-6">
+          <span className="material-symbols-outlined text-3xl text-slate-300 mb-2 block">
+            local_pharmacy
+          </span>
+          <p className="text-sm text-slate-500">Walang nakitang botika malapit</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {previewPharmacies.map((pharmacy) => (
+            <PharmacyCard
+              key={pharmacy.id}
+              pharmacy={pharmacy}
+              showDistance={true}
+              compact={true}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+};
 
 // =============================================================================
 // HOMEPAGE COMPONENT
 // =============================================================================
 
 const HomePage: React.FC = () => {
-  // Navigation
   const navigate = useNavigate();
 
-  // Search state from store (for selected medicine)
-  const selectedMedicine = useSearchStore((s) => s.selectedMedicine);
-  const selectMedicine = useSearchStore((s) => s.selectMedicine);
+  // Auth state for personalized greeting
+  const profile = useAuthStore((s) => s.profile);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+  const refreshProfile = useAuthStore((s) => s.refreshProfile);
 
-  // Local search query for pharmacy name filtering
-  const [searchQuery, setSearchQuery] = useState('');
+  // Refresh profile when auth is initialized but profile is missing (e.g., after login redirect)
+  React.useEffect(() => {
+    if (isInitialized && isAuthenticated && !profile) {
+      refreshProfile();
+    }
+  }, [isInitialized, isAuthenticated, profile, refreshProfile]);
 
-  // Chat modal state
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  // Get display name (first name only if full name)
+  const displayName = profile?.displayName 
+    ? profile.displayName.split(' ')[0] 
+    : undefined;
 
-  // Accessibility settings modal state
-  const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
+  // Handle search query submission
+  const handleSearch = (query: string) => {
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+  };
 
-  // Store
-  const {
-    stockFilters,
-    toggleStockFilter,
-    selectedPharmacyId,
-    selectPharmacy,
-    maxDistance,
-  } = useMapStore();
-
-  // Use a stable query center to prevent data refresh on map pan/zoom (MVP simplification)
-  // This uses the default center for the pharmacy query - map can still pan freely
-  const stableQueryCenter = useMemo(() => MAP_CONFIG.DEFAULT_CENTER, []);
-
-  // Fetch nearby pharmacies with stable center (doesn't refetch on map movement)
-  const { pharmacies, isLoading, isError, refetch } = useNearbyPharmacies({
-    center: stableQueryCenter,
-    radiusMeters: maxDistance,
-  });
-
-  // Filter pharmacies by stock status and search query
-  const filteredPharmacies = useMemo(() => {
-    return pharmacies.filter((pharmacy) => {
-      // Stock filter
-      if (!stockFilters.includes(pharmacy.stockStatus)) {
-        return false;
-      }
-
-      // Search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return (
-          pharmacy.name.toLowerCase().includes(query) ||
-          pharmacy.address.toLowerCase().includes(query) ||
-          pharmacy.chainName?.toLowerCase().includes(query)
-        );
-      }
-
-      return true;
-    });
-  }, [pharmacies, stockFilters, searchQuery]);
-
-  // Handlers
-  const handlePharmacyClick = useCallback(
-    (pharmacy: PharmacyWithStock) => {
-      selectPharmacy(pharmacy.id);
-    },
-    [selectPharmacy]
-  );
-
-  const handleCardClick = useCallback(
-    (pharmacy: PharmacyWithStock) => {
-      selectPharmacy(pharmacy.id);
-    },
-    [selectPharmacy]
-  );
+  // Handle recent search click
+  const handleRecentSearchSelect = (query: string) => {
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+  };
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-slate-200">
-      {/* Map (full screen background) */}
-      <div className="absolute inset-0 z-0">
-        <Suspense fallback={<MapLoadingFallback />}>
-          <MapView
-            pharmacies={filteredPharmacies}
-            isLoading={isLoading}
-            onPharmacyClick={handlePharmacyClick}
-          />
-        </Suspense>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-background-dark dark:to-slate-900">
+      {/* Top Navigation Header - Solid variant for home */}
+      <NavHeader variant="solid" />
 
-      {/* UI Overlay Layer */}
-      <div className="relative z-20 flex flex-col h-full pointer-events-none">
-        {/* Navigation Header */}
-        <NavHeader />
+      {/* Main Content */}
+      <main className="pb-28">
+        {/* Hero Section with Search */}
+        <HeroSearch
+          userName={isAuthenticated ? displayName : undefined}
+          onSearch={handleSearch}
+        />
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex overflow-hidden max-w-[1440px] mx-auto w-full px-4 pb-4 gap-4 pointer-events-none">
-          {/* Left Sidebar Floating Panel - Desktop */}
-          <aside className="w-full max-w-[400px] hidden md:flex flex-col gap-4 pointer-events-auto h-full pb-2">
-            {/* Medicine Search Bar with Voice Search & Autocomplete */}
-            <SearchBar
-              onSelect={(medicine: MedicineSearchResult) => {
-                selectMedicine(medicine);
-                // Navigate to search results page with the selected medicine
-                navigate(`/search?medicineId=${medicine.id}`);
-              }}
-              onSearch={(query: string) => {
-                // Navigate to search results page with query text
-                navigate(`/search?q=${encodeURIComponent(query)}`);
-              }}
-              placeholder="Maghanap ng gamot..."
-            />
+        {/* Quick Actions - Side by Side Cards */}
+        <QuickActionsSection />
 
-            {/* Selected Medicine Indicator */}
-            {selectedMedicine && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-xl border border-primary/20">
-                <span className="material-symbols-outlined text-primary text-lg">medication</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-primary truncate">
-                    {selectedMedicine.brand_name || selectedMedicine.generic_name}
-                  </p>
-                  {selectedMedicine.brand_name && (
-                    <p className="text-xs text-muted truncate">{selectedMedicine.generic_name}</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    selectMedicine(null);
-                    setSearchQuery('');
-                  }}
-                  className="size-6 flex items-center justify-center rounded-full hover:bg-primary/20 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-primary text-sm">close</span>
-                </button>
-              </div>
-            )}
+        {/* View Map CTA */}
+        <ViewMapCTA />
 
-            {/* Filter Chips */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 px-1">
-              <FilterChip
-                label="In Stock"
-                status="in_stock"
-                isActive={stockFilters.includes('in_stock')}
-                onClick={() => toggleStockFilter('in_stock')}
-              />
-              <FilterChip
-                label="Low Stock"
-                status="low_stock"
-                isActive={stockFilters.includes('low_stock')}
-                onClick={() => toggleStockFilter('low_stock')}
-              />
-              <FilterChip
-                label="Out of Stock"
-                status="out_of_stock"
-                isActive={stockFilters.includes('out_of_stock')}
-                onClick={() => toggleStockFilter('out_of_stock')}
-              />
-            </div>
+        {/* Recent Searches */}
+        <div className="px-4 max-w-lg mx-auto">
+          <RecentSearchesSection onSearchSelect={handleRecentSearchSelect} />
+        </div>
 
-            {/* Results List Panel - Glass Panel */}
+        {/* Nearby Pharmacies Preview */}
+        <div className="px-4 max-w-lg mx-auto">
+          <NearbyPharmaciesPreview />
+        </div>
+
+        {/* Alay CTA for authenticated users */}
+        {isAuthenticated && (
+          <section className="px-4 max-w-lg mx-auto">
             <div
               className={cn(
-                'flex-1 rounded-[2rem] flex flex-col overflow-hidden min-h-0',
-                'bg-white/50 backdrop-blur-xl',
-                'border border-white/15',
-                'shadow-[0_8px_32px_0_rgba(31,38,135,0.08)]'
+                'p-4 rounded-2xl',
+                'bg-gradient-to-br from-primary/10 to-primary/5',
+                'border border-primary/20'
               )}
             >
-              {/* Handle/Header */}
-              <div className="p-6 pb-2 shrink-0">
-                <div className="w-12 h-1 bg-slate-300 rounded-full mx-auto mb-4 md:hidden" />
-                <h2 className="text-xl font-bold text-slate-800 leading-tight">
-                  {filteredPharmacies.length} na botika malapit sa'yo
-                </h2>
-                <p className="text-sm text-slate-500 mt-1">Updated in real-time</p>
-              </div>
-
-              {/* Scrollable List */}
-              <div className="flex-1 overflow-y-auto p-4 pt-2 space-y-3 scrollbar-hide">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Spinner size="md" />
-                  </div>
-                ) : isError ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <span className="material-symbols-outlined text-4xl text-rose-400 mb-2">
-                      error
-                    </span>
-                    <p className="text-sm text-slate-600 mb-3">
-                      Failed to load pharmacies
-                    </p>
-                    <button
-                      onClick={() => refetch()}
-                      className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-                    >
-                      Try Again
-                    </button>
-                  </div>
-                ) : filteredPharmacies.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">
-                      search_off
-                    </span>
-                    <p className="text-sm text-slate-500">
-                      No pharmacies found matching your filters
-                    </p>
-                  </div>
-                ) : (
-                  filteredPharmacies.map((pharmacy) => (
-                    <PharmacyCardNew
-                      key={pharmacy.id}
-                      pharmacy={pharmacy}
-                      showDistance={true}
-                      compact={false}
-                      onClick={() => handleCardClick(pharmacy)}
-                      className={selectedPharmacyId === pharmacy.id ? 'ring-2 ring-primary' : ''}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          </aside>
-
-          {/* Map Controls (Floating Right) */}
-          <div className="flex-col gap-3 ml-auto hidden md:flex pointer-events-auto pt-4">
-            {/* Scanner FAB - Desktop */}
-            <Link
-              to="/scanner"
-              className={cn(
-                'size-14 rounded-full flex items-center justify-center',
-                'bg-accent hover:bg-accent-hover',
-                'shadow-lg shadow-accent/30',
-                'text-white transition-all hover:scale-105'
-              )}
-              title="Scan Prescription"
-            >
-              <span className="material-symbols-outlined text-[28px]">document_scanner</span>
-            </Link>
-            <div className="h-2" /> {/* Spacer */}
-            <button
-              className={cn(
-                'size-12 rounded-full flex items-center justify-center',
-                'bg-white/50 backdrop-blur-xl border border-white/15',
-                'shadow-[0_8px_32px_0_rgba(31,38,135,0.08)]',
-                'text-slate-700 hover:bg-white transition-colors'
-              )}
-              title="My Location"
-            >
-              <span className="material-symbols-outlined">my_location</span>
-            </button>
-            <button
-              className={cn(
-                'size-12 rounded-full flex items-center justify-center',
-                'bg-white/50 backdrop-blur-xl border border-white/15',
-                'shadow-[0_8px_32px_0_rgba(31,38,135,0.08)]',
-                'text-slate-700 hover:bg-white transition-colors'
-              )}
-              title="Zoom In"
-            >
-              <span className="material-symbols-outlined">add</span>
-            </button>
-            <button
-              className={cn(
-                'size-12 rounded-full flex items-center justify-center',
-                'bg-white/50 backdrop-blur-xl border border-white/15',
-                'shadow-[0_8px_32px_0_rgba(31,38,135,0.08)]',
-                'text-slate-700 hover:bg-white transition-colors'
-              )}
-              title="Zoom Out"
-            >
-              <span className="material-symbols-outlined">remove</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Bottom Sheet */}
-      <div className="md:hidden absolute bottom-0 left-0 right-0 z-10 pointer-events-auto">
-        {/* Mobile Scanner FAB */}
-        <Link
-          to="/scanner"
-          className={cn(
-            'absolute -top-20 right-4 size-14 rounded-full',
-            'flex items-center justify-center',
-            'bg-accent hover:bg-accent-hover',
-            'shadow-lg shadow-accent/30',
-            'text-white transition-all active:scale-95'
-          )}
-        >
-          <span className="material-symbols-outlined text-[28px]">document_scanner</span>
-        </Link>
-
-        {/* Drag Handle */}
-        <div className="flex justify-center py-2 bg-white rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
-          <div className="w-10 h-1 bg-slate-300 rounded-full" />
-        </div>
-
-        {/* Sheet Content */}
-        <div className="bg-white max-h-[60vh] overflow-hidden">
-          {/* Search Header */}
-          <div className="p-4 border-b border-slate-100">
-            <SearchBar
-              onSelect={(medicine: MedicineSearchResult) => {
-                selectMedicine(medicine);
-                // Navigate to search results page with the selected medicine
-                navigate(`/search?medicineId=${medicine.id}`);
-              }}
-              onSearch={(query: string) => {
-                // Navigate to search results page with query text
-                navigate(`/search?q=${encodeURIComponent(query)}`);
-              }}
-              placeholder="Maghanap ng gamot..."
-            />
-
-            {/* Selected Medicine Indicator - Mobile */}
-            {selectedMedicine && (
-              <div className="flex items-center gap-2 px-3 py-2 mt-3 bg-primary/10 rounded-xl border border-primary/20">
-                <span className="material-symbols-outlined text-primary text-lg">medication</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-primary truncate">
-                    {selectedMedicine.brand_name || selectedMedicine.generic_name}
+              <div className="flex items-center gap-3">
+                <div className="size-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-primary text-2xl">
+                    volunteer_activism
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-display font-semibold text-sm text-primary">
+                    Maging Alay Hero!
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    Tumulong mag-report ng stock at makakuha ng points
                   </p>
                 </div>
-                <button
-                  onClick={() => {
-                    selectMedicine(null);
-                    setSearchQuery('');
-                  }}
-                  className="size-6 flex items-center justify-center rounded-full hover:bg-primary/20 transition-colors"
+                <Link
+                  to="/profile"
+                  className={cn(
+                    'px-4 py-2 rounded-full',
+                    'bg-primary text-white text-sm font-medium',
+                    'hover:bg-primary-hover transition-colors',
+                    'active:scale-95'
+                  )}
                 >
-                  <span className="material-symbols-outlined text-primary text-sm">close</span>
-                </button>
+                  Tingnan
+                </Link>
               </div>
-            )}
-
-            {/* Mobile Filters */}
-            <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide pb-1">
-              <FilterChip
-                label="In Stock"
-                status="in_stock"
-                isActive={stockFilters.includes('in_stock')}
-                onClick={() => toggleStockFilter('in_stock')}
-              />
-              <FilterChip
-                label="Low Stock"
-                status="low_stock"
-                isActive={stockFilters.includes('low_stock')}
-                onClick={() => toggleStockFilter('low_stock')}
-              />
-              <FilterChip
-                label="Out of Stock"
-                status="out_of_stock"
-                isActive={stockFilters.includes('out_of_stock')}
-                onClick={() => toggleStockFilter('out_of_stock')}
-              />
             </div>
-          </div>
-
-          {/* Results Header */}
-          <div className="px-4 py-2">
-            <p className="text-sm font-medium text-slate-600">
-              {filteredPharmacies.length} na botika malapit sa'yo
-            </p>
-          </div>
-
-          {/* Pharmacy List */}
-          <div className="overflow-y-auto max-h-[35vh] px-3 pb-safe space-y-2">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Spinner size="md" />
-              </div>
-            ) : filteredPharmacies.length === 0 ? (
-              <p className="text-sm text-slate-500 text-center py-8">
-                No pharmacies found
-              </p>
-            ) : (
-              filteredPharmacies.slice(0, 5).map((pharmacy) => (
-                <PharmacyCardNew
-                  key={pharmacy.id}
-                  pharmacy={pharmacy}
-                  showDistance={true}
-                  compact={true}
-                  onClick={() => handleCardClick(pharmacy)}
-                  className={selectedPharmacyId === pharmacy.id ? 'ring-2 ring-primary' : ''}
-                />
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Floating Chat Button - Medi-Bot */}
-      <button
-        onClick={() => setIsChatOpen(true)}
-        className={cn(
-          'fixed bottom-24 right-4 z-50',
-          'w-14 h-14 rounded-full',
-          'flex items-center justify-center',
-          'bg-primary text-white',
-          'shadow-lg shadow-primary/30',
-          'transition-all duration-200',
-          'hover:bg-primary-hover hover:shadow-xl hover:shadow-primary/40',
-          'hover:scale-105',
-          'active:scale-95'
+          </section>
         )}
-        aria-label="Open Medi-Bot chat"
-      >
-        <span className="material-symbols-outlined text-2xl" aria-hidden="true">
-          smart_toy
-        </span>
-      </button>
-
-      {/* Floating Accessibility Button - Large and easy to tap for seniors */}
-      <button
-        onClick={() => setIsAccessibilityOpen(true)}
-        className={cn(
-          'fixed bottom-40 right-4 z-50',
-          'w-14 h-14 rounded-full',
-          'flex items-center justify-center',
-          'bg-white text-primary',
-          'shadow-lg border-2 border-primary/20',
-          'transition-all duration-200',
-          'hover:bg-primary hover:text-white hover:shadow-xl',
-          'hover:scale-105',
-          'active:scale-95'
-        )}
-        aria-label="Open accessibility settings"
-      >
-        <span className="material-symbols-outlined text-2xl" aria-hidden="true">
-          accessibility_new
-        </span>
-      </button>
-
-      {/* Accessibility Settings Bottom Sheet */}
-      <BottomSheet
-        isOpen={isAccessibilityOpen}
-        onClose={() => setIsAccessibilityOpen(false)}
-        title="Accessibility"
-        defaultSnap="half"
-      >
-        <AccessibilityMenu hideHeader className="bg-transparent" />
-      </BottomSheet>
-
-      {/* Medi-Bot Chat Modal */}
-      <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
-
-      {/* Selected Pharmacy Bottom Sheet */}
-      <SelectedPharmacySheet />
+      </main>
     </div>
   );
 };

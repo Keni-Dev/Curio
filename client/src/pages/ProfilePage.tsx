@@ -15,9 +15,11 @@ import {
   AchievementBadgeList,
   ACHIEVEMENT_BADGES,
   useLeaderboard,
+  useUserActivity,
 } from '@/features/alay';
 import { Spinner, AccessibilityMenu } from '@/components/ui';
-import { CurioBrand } from '@/components/ui/CurioLogo';
+import { useAuthStore } from '@/stores/useAuthStore';
+import NavHeader from '@/components/layout/NavHeader';
 
 // =============================================================================
 // COMPONENT
@@ -26,65 +28,24 @@ import { CurioBrand } from '@/components/ui/CurioLogo';
 export function ProfilePage() {
   const { data: profile, isLoading: profileLoading } = useAlayPoints();
   const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard({ limit: 10 });
+  const { data: recentActivity = [], isLoading: activityLoading } = useUserActivity({ limit: 10 });
+  const authUser = useAuthStore((state) => state.user);
+  const authProfile = useAuthStore((state) => state.profile);
 
-  // Mock badges for demo (would come from backend)
+  // Calculate badges based on actual user stats
+  const contributionCount = profile?.contributionCount ?? 0;
+  const streakDays = profile?.streakDays ?? 0;
+  const helpfulVotes = profile?.helpfulVotes ?? 0;
+
   const userBadges = [
-    { ...ACHIEVEMENT_BADGES.firstReport, isEarned: true },
-    { ...ACHIEVEMENT_BADGES.speedyScout, isEarned: true },
-    { ...ACHIEVEMENT_BADGES.truthTeller, isEarned: true },
-    { ...ACHIEVEMENT_BADGES.communityHeart, isEarned: true },
-    { ...ACHIEVEMENT_BADGES.weekStreak, isEarned: false },
-    { ...ACHIEVEMENT_BADGES.monthStreak, isEarned: false },
-    { ...ACHIEVEMENT_BADGES.reporter100, isEarned: false },
-    { ...ACHIEVEMENT_BADGES.bayanihanChampion, isEarned: false },
-  ];
-
-  // Mock activity for demo
-  const recentActivity = [
-    {
-      id: '1',
-      type: 'stock_report',
-      title: 'Reported generic paracetamol stock',
-      location: 'Mercury Drug, Quezon Ave',
-      points: 20,
-      timeAgo: '2h ago',
-      icon: 'inventory_2',
-      iconBg: 'bg-primary/10',
-      iconColor: 'text-primary',
-    },
-    {
-      id: '2',
-      type: 'verification',
-      title: 'Verified stock availability',
-      location: 'Watsons, SM North EDSA',
-      points: 10,
-      timeAgo: '5h ago',
-      icon: 'check_circle',
-      iconBg: 'bg-blue-50 dark:bg-blue-900/20',
-      iconColor: 'text-blue-500',
-    },
-    {
-      id: '3',
-      type: 'vote',
-      title: 'Upvoted price accuracy',
-      location: 'The Generics Pharmacy',
-      points: 5,
-      timeAgo: '1d ago',
-      icon: 'thumbs_up_down',
-      iconBg: 'bg-purple-50 dark:bg-purple-900/20',
-      iconColor: 'text-purple-500',
-    },
-    {
-      id: '4',
-      type: 'achievement',
-      title: 'Earned "Truth Teller" Badge',
-      location: 'Achievement Unlocked',
-      points: 50,
-      timeAgo: '2d ago',
-      icon: 'military_tech',
-      iconBg: 'bg-orange-50 dark:bg-orange-900/20',
-      iconColor: 'text-orange-500',
-    },
+    { ...ACHIEVEMENT_BADGES.firstReport, isEarned: contributionCount >= 1 },
+    { ...ACHIEVEMENT_BADGES.speedyScout, isEarned: contributionCount >= 5 },
+    { ...ACHIEVEMENT_BADGES.truthTeller, isEarned: helpfulVotes >= 10 },
+    { ...ACHIEVEMENT_BADGES.communityHeart, isEarned: helpfulVotes >= 50 },
+    { ...ACHIEVEMENT_BADGES.weekStreak, isEarned: streakDays >= 7 },
+    { ...ACHIEVEMENT_BADGES.monthStreak, isEarned: streakDays >= 30 },
+    { ...ACHIEVEMENT_BADGES.reporter100, isEarned: contributionCount >= 100 },
+    { ...ACHIEVEMENT_BADGES.bayanihanChampion, isEarned: contributionCount >= 500 && helpfulVotes >= 100 },
   ];
 
   if (profileLoading) {
@@ -108,31 +69,7 @@ export function ProfilePage() {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
       {/* Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md">
-        <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto h-16 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <a href="/" className="flex items-center gap-3 text-text-primary dark:text-white group">
-            <div className="group-hover:scale-110 transition-transform duration-300">
-              <CurioBrand logoSize={32} variant="primary" />
-            </div>
-          </a>
-
-          {/* Navigation */}
-          <nav className="hidden lg:flex items-center gap-6">
-            <a href="/" className="text-sm font-medium text-text-secondary hover:text-primary transition-colors">
-              Map
-            </a>
-            <a href="/profile" className="text-sm font-semibold text-primary">
-              Dashboard
-            </a>
-          </nav>
-
-          {/* Report button */}
-          <button className="hidden sm:flex items-center justify-center h-10 px-5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-sm transition-all shadow-soft">
-            Report Stock
-          </button>
-        </div>
-      </header>
+      <NavHeader variant="glass" />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
@@ -147,25 +84,33 @@ export function ProfilePage() {
               <div className="relative mb-4">
                 <div className="h-32 w-32 rounded-full p-1 bg-gradient-to-tr from-amber-400 to-amber-500 shadow-glow">
                   <div className="h-full w-full rounded-full bg-white dark:bg-surface-dark p-1">
-                    <div
-                      className="h-full w-full rounded-full bg-cover bg-center"
-                      style={{
-                        backgroundImage: `url(https://api.dicebear.com/7.x/avataaars/svg?seed=curio-user)`,
-                      }}
-                    />
+                    {authProfile?.avatarUrl || authUser?.user_metadata?.avatar_url ? (
+                      <img
+                        src={authProfile?.avatarUrl || authUser?.user_metadata?.avatar_url}
+                        alt="Profile"
+                        className="h-full w-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="h-full w-full rounded-full bg-cover bg-center"
+                        style={{
+                          backgroundImage: `url(https://api.dicebear.com/7.x/avataaars/svg?seed=${authUser?.id || 'curio-user'})`,
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
                 <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-900 text-[10px] font-bold px-3 py-1 rounded-full border-2 border-white dark:border-surface-dark uppercase tracking-wider shadow-sm">
-                  Level 5 Scout
+                  {displayProfile.level}
                 </div>
               </div>
 
               <h1 className="text-2xl font-bold text-text-primary dark:text-white mt-2">
-                Juan Dela Cruz
+                {authProfile?.displayName || authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || authUser?.email?.split('@')[0] || 'User'}
               </h1>
               <p className="text-text-secondary text-sm flex items-center gap-1 mt-1">
-                <span className="material-symbols-outlined text-[16px]">location_on</span>
-                Quezon City • Member since Jan 2023
+                <span className="material-symbols-outlined text-[16px]">email</span>
+                {authUser?.email || 'No email'}
               </p>
 
               {/* Tags */}
@@ -226,40 +171,65 @@ export function ProfilePage() {
               </h2>
 
               <div className="bg-white dark:bg-surface-dark rounded-2xl shadow-card overflow-hidden">
-                {recentActivity.map((activity, index) => (
-                  <div
-                    key={activity.id}
-                    className={cn(
-                      'group flex items-center gap-4 p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer',
-                      index !== recentActivity.length - 1 && 'border-b border-slate-100 dark:border-slate-800'
-                    )}
-                  >
+                {activityLoading ? (
+                  <div className="p-8 flex justify-center">
+                    <Spinner size="md" />
+                  </div>
+                ) : recentActivity.length > 0 ? (
+                  recentActivity.map((activity, index) => (
                     <div
+                      key={activity.id}
                       className={cn(
-                        'size-12 rounded-xl flex items-center justify-center transition-colors',
-                        activity.iconBg,
-                        activity.iconColor,
-                        'group-hover:bg-primary group-hover:text-white'
+                        'group flex items-center gap-4 p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer',
+                        index !== recentActivity.length - 1 && 'border-b border-slate-100 dark:border-slate-800'
                       )}
                     >
-                      <span className="material-symbols-outlined">{activity.icon}</span>
-                    </div>
+                      <div
+                        className={cn(
+                          'size-12 rounded-xl flex items-center justify-center transition-colors',
+                          activity.iconBg,
+                          activity.iconColor,
+                          'group-hover:bg-primary group-hover:text-white'
+                        )}
+                      >
+                        <span className="material-symbols-outlined">{activity.icon}</span>
+                      </div>
 
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-text-primary dark:text-white truncate">
-                        {activity.title}
-                      </h3>
-                      <p className="text-xs text-text-secondary mt-0.5">{activity.location}</p>
-                    </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold text-text-primary dark:text-white truncate">
+                          {activity.title}
+                        </h3>
+                        <p className="text-xs text-text-secondary mt-0.5">{activity.location}</p>
+                      </div>
 
-                    <div className="text-right">
-                      <span className="inline-block px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-bold font-mono">
-                        +{activity.points} pts
-                      </span>
-                      <p className="text-xs text-text-muted mt-1">{activity.timeAgo}</p>
+                      <div className="text-right">
+                        <span className="inline-block px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-bold font-mono">
+                          +{activity.points} pts
+                        </span>
+                        <p className="text-xs text-text-muted mt-1">{activity.timeAgo}</p>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-3xl text-slate-400">volunteer_activism</span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-text-primary dark:text-white mb-1">
+                      No activity yet
+                    </h3>
+                    <p className="text-sm text-text-secondary mb-4">
+                      Start contributing to help your community find medicine!
+                    </p>
+                    <a
+                      href="/"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white font-medium rounded-xl hover:bg-primary-hover transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">add</span>
+                      Report Stock
+                    </a>
                   </div>
-                ))}
+                )}
               </div>
             </section>
 

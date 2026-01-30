@@ -173,6 +173,34 @@ export const tl: TranslationSchema = {
   },
 
   // ==========================================================================
+  // Auth
+  // ==========================================================================
+  auth: {
+    welcomeBack: 'Maligayang pagbabalik',
+    signInSubtitle: 'Ilagay ang iyong mga detalye para mag-sign in.',
+    emailAddress: 'Email Address',
+    emailPlaceholder: 'juan@example.com',
+    password: 'Password',
+    passwordPlaceholder: 'Ilagay ang iyong password',
+    forgotPassword: 'Nakalimutan ang password?',
+    signIn: 'Mag-sign in',
+    signingIn: 'Nagsa-sign in...',
+    orContinueWith: 'O magpatuloy gamit ang',
+    signInWithGoogle: 'Mag-sign in gamit ang Google',
+    noAccount: 'Wala pang account?',
+    signUp: 'Mag-sign up',
+    hasAccount: 'May account na?',
+    bayanihanTitle: 'Bayanihan sa',
+    bayanihanSubtitle: 'Kalusugan',
+    bayanihanDesc: 'Sumali sa komunidad na nakatuon sa crowdsourced medicine tracking. Sama-sama, ginagawa nating accessible ang healthcare para sa lahat.',
+    copyright: '© 2023 Curio Health. Lahat ng karapatan ay nakalaan.',
+    emailRequired: 'Kinakailangan ang email',
+    emailInvalid: 'Maglagay ng valid na email',
+    passwordRequired: 'Kinakailangan ang password',
+    signInFailed: 'Hindi matagumpay ang pag-sign in',
+  },
+
+  // ==========================================================================
   // Profile
   // ==========================================================================
   profile: {
@@ -196,6 +224,33 @@ export const tl: TranslationSchema = {
     permissionDenied: 'Hindi pinapayagan.',
     notFound: 'Hindi nahanap ang page',
     serverError: 'Server error. Subukan muli mamaya.',
+  },
+
+  // ==========================================================================
+  // Onboarding
+  // ==========================================================================
+  onboarding: {
+    skip: 'Laktawan',
+    next: 'Susunod',
+    getStarted: 'Magsimula Na',
+    enableLocation: 'I-enable ang Lokasyon',
+    // Slide 1 - Welcome
+    welcomeBadge: 'Medicine Finder',
+    welcomeTitle: 'Hanapin ang Gamot, Mas Mabilis',
+    welcomeDescription: 'Ang Curio ay parang Waze para sa gamot. Makita ang real-time availability ng gamot sa mga botika malapit sa iyo.',
+    // Slide 2 - Search
+    searchBadge: 'Smart Search',
+    searchTitle: 'Tingnan ang Gamot Mo',
+    searchDescription: 'Maghanap ng kahit anong gamot at agad makita kung aling mga botika malapit ang may stock. Wala nang sayang na biyahe.',
+    // Slide 3 - Community
+    communityBadge: 'Community Power',
+    communityTitle: 'Tayo-tayo ang Magkakatulong',
+    communityDescription: 'Mag-report ng stock at kumita ng Alay Points. Ang iyong kontribusyon ay nakakatulong magligtas ng buhay sa real-time.',
+    // Slide 4 - Get Started
+    startBadge: 'Ready Na',
+    startTitle: 'Magsimula Na Tayo',
+    startDescription: 'I-enable ang lokasyon para makita ang mga botika malapit sa iyo at magsimulang maghanap ng gamot nang mas mabilis.',
+    locationPermission: 'Kailangan namin ang iyong lokasyon para ipakita ang mga botika malapit sa iyo',
   },
 
   // ==========================================================================

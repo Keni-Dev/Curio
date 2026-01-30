@@ -10,6 +10,9 @@ export { MedicalDisclaimer } from './components/MedicalDisclaimer';
 export { ChatInput } from './components/ChatInput';
 
 // Hooks
+export { useMediBot } from './hooks/useMediBot';
+export type { UseMediBotReturn } from './hooks/useMediBot';
+// Legacy export for backward compatibility
 export { useOpenRouter } from './hooks/useOpenRouter';
 export type { UseOpenRouterReturn } from './hooks/useOpenRouter';
 

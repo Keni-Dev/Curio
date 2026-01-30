@@ -1,12 +1,14 @@
 /**
  * Custom hook for browser geolocation
  * Handles permissions, errors, and location updates
+ * Supports mock location override for development testing
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Coordinates, GeolocationError } from '~types/common';
 import { GEOLOCATION_CONFIG, MAP_CONFIG, STORAGE_KEYS } from '~lib/constants';
 import { safeJsonParse } from '~lib/utils';
+import { useDevToolsStore, isDevMode } from '~stores/useDevToolsStore';
 
 interface UseGeolocationOptions {
   enableHighAccuracy?: boolean;
@@ -25,6 +27,7 @@ interface UseGeolocationReturn {
 
 /**
  * Hook for accessing user's geolocation
+ * Supports mock location override via DevTools in development
  * @param options - Geolocation options
  * @returns Geolocation state and controls
  */
@@ -38,7 +41,19 @@ export function useGeolocation(
     watchPosition = false,
   } = options;
 
+  // Dev tools mock location (only in dev mode)
+  const isMockEnabled = useDevToolsStore((s) => s.isMockLocationEnabled);
+  const mockLocation = useDevToolsStore((s) => s.mockLocation);
+  const useMockLocation = isDevMode() && isMockEnabled;
+
   const [coordinates, setCoordinates] = useState<Coordinates | null>(() => {
+    // In dev mode with mock enabled, use mock location
+    if (isDevMode()) {
+      const store = useDevToolsStore.getState();
+      if (store.isMockLocationEnabled) {
+        return store.mockLocation;
+      }
+    }
     // Try to get cached location on initial load
     if (typeof window !== 'undefined') {
       const cached = localStorage.getItem(STORAGE_KEYS.CACHED_LOCATION);
@@ -151,13 +166,30 @@ export function useGeolocation(
     maximumAge,
   ]);
 
-  return {
-    coordinates,
-    error,
-    isLoading,
-    isSupported,
-    refresh: getPosition,
-  };
+  // Memoize result to handle mock location override
+  const result = useMemo((): UseGeolocationReturn => {
+    // If mock location is enabled in dev mode, return mock data
+    if (useMockLocation) {
+      return {
+        coordinates: mockLocation,
+        error: null,
+        isLoading: false,
+        isSupported: true,
+        refresh: getPosition,
+      };
+    }
+
+    // Return real geolocation data
+    return {
+      coordinates,
+      error,
+      isLoading,
+      isSupported,
+      refresh: getPosition,
+    };
+  }, [useMockLocation, mockLocation, coordinates, error, isLoading, isSupported, getPosition]);
+
+  return result;
 }
 
 /**

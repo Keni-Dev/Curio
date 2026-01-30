@@ -5,13 +5,39 @@
 
 import type { QuickAction } from './types';
 
-/** OpenRouter API configuration */
-export const OPENROUTER_CONFIG = {
-  apiUrl: 'https://openrouter.ai/api/v1/chat/completions',
-  model: 'meta-llama/llama-3.1-8b-instruct:free',
+/** Gemini API configuration (Primary) */
+export const GEMINI_CONFIG = {
+  baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
+  model: 'gemini-2.0-flash',  // Latest fast model
   maxTokens: 1024,
   temperature: 0.7,
 } as const;
+
+/** OpenRouter API configuration (Fallback) */
+export const OPENROUTER_CONFIG = {
+  apiUrl: 'https://openrouter.ai/api/v1/chat/completions',
+  maxTokens: 1024,
+  temperature: 0.7,
+} as const;
+
+/** 
+ * Free text models for OpenRouter fallback
+ */
+export const OPENROUTER_MODELS = [
+  'deepseek/deepseek-r1-0528:free',              // Primary - DeepSeek R1 (most reliable)
+  'qwen/qwen3-4b:free',                          // Fallback 1 - Qwen3 4B (fast)
+  'meta-llama/llama-3.3-70b-instruct:free',      // Fallback 2 - Llama 3.3 70B
+  'google/gemma-3-27b-it:free',                  // Fallback 3 - Gemma 3 27B
+] as const;
+
+/** Model cooldown period (5 minutes) */
+export const MODEL_COOLDOWN_MS = 5 * 60 * 1000;
+
+/** Rate limit cooldown period (30 seconds) */
+export const RATE_LIMIT_COOLDOWN_MS = 30 * 1000;
+
+/** Minimum delay between API requests (2 seconds) */
+export const MIN_REQUEST_INTERVAL_MS = 2000;
 
 /** Maximum messages to keep in context for API calls */
 export const MAX_CONTEXT_MESSAGES = 10;

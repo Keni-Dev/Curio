@@ -26,9 +26,9 @@ const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || '';
  * Verified from OpenRouter API: curl -s "https://openrouter.ai/api/v1/models" | jq for image modality
  */
 const VISION_MODELS = [
+  'nvidia/nemotron-nano-12b-v2-vl:free',         // Fallback 2 - NVIDIA Nemotron VL
   'google/gemma-3-27b-it:free',                  // Primary - Google Gemma 3 27B (best quality)
   'mistralai/mistral-small-3.1-24b-instruct:free', // Fallback 1 - Mistral Small 3.1
-  'nvidia/nemotron-nano-12b-v2-vl:free',         // Fallback 2 - NVIDIA Nemotron VL
   'qwen/qwen-2.5-vl-7b-instruct:free',           // Fallback 3 - Qwen 2.5 VL
   'google/gemma-3-12b-it:free',                  // Fallback 4 - Google Gemma 3 12B
   'allenai/molmo-2-8b:free',                     // Fallback 5 - AllenAI Molmo2
@@ -36,13 +36,19 @@ const VISION_MODELS = [
 
 /** 
  * Free text models for Stage 2 medicine parsing (no image support needed)
- * Verified from OpenRouter API
+ * Verified from OpenRouter API - comprehensive fallback list
  */
 const TEXT_MODELS = [
-  'meta-llama/llama-3.3-70b-instruct:free',      // Primary - Llama 3.3 70B (best quality)
-  'qwen/qwen3-4b:free',                          // Fallback 1 - Qwen3 4B (fast)
-  'google/gemma-3-12b-it:free',                  // Fallback 2 - Gemma 3 12B
-  'mistralai/mistral-small-3.1-24b-instruct:free', // Fallback 3 - Mistral Small
+  'nvidia/nemotron-nano-9b-v2:free',             // Fallback 3 - NVIDIA Nemotron
+  'openai/gpt-oss-20b:free',                     // Fallback 5 - OpenAI OSS
+  'deepseek/deepseek-r1-0528:free',              // Fallback 7 - DeepSeek R1
+  'z-ai/glm-4.5-air:free',                       // Fallback 8 - GLM 4.5
+  'liquid/lfm-2.5-1.2b-instruct:free',           // Fallback 9 - LiquidAI (smallest, fastest)
+  'moonshotai/kimi-k2:free',                     // Fallback 6 - Kimi K2
+  'meta-llama/llama-3.3-70b-instruct:free',      // Primary - Llama 3.3 70B
+  'meta-llama/llama-3.1-405b-instruct:free',     // Fallback 1 - Llama 3.1 405B (largest)
+  'qwen/qwen3-4b:free',                          // Fallback 2 - Qwen3 4B (fast)
+  'meta-llama/llama-3.2-3b-instruct:free',       // Fallback 4 - Llama 3.2 3B
 ] as const;
 
 /** Track which models have failed recently to avoid repeated failures */
@@ -81,43 +87,20 @@ Examples:
 Extract what is ACTUALLY written, not what you think should be there.`;
 
 /** Stage 2: Medicine parsing prompt - separates medicine names from dosages/instructions */
-const MEDICINE_PARSING_PROMPT = `You are a medical prescription parser. Given raw OCR text from a prescription, extract and separate medicine names from their dosages and instructions.
+const MEDICINE_PARSING_PROMPT = `Parse this prescription text. Extract medicine names and dosages.
 
-CRITICAL RULES:
-1. MEDICINE NAME should contain ONLY the drug/brand name (e.g., "Metformin", "Losartan", "Amlodipine")
-2. DOSAGE should contain strength AND frequency (e.g., "500mg twice daily", "50mg once daily")
-3. If dosage info is mixed with name, SEPARATE them properly
-4. If multiple medicines, extract ALL of them
-5. Ignore non-medicine text (doctor name, patient info, dates, etc.)
-6. Standardize common abbreviations:
-   - "od" or "OD" → "once daily"
-   - "bd" or "bid" → "twice daily"
-   - "tds" or "tid" → "three times daily"
-   - "qds" or "qid" → "four times daily"
-   - "prn" → "as needed"
-   - "iv" → "intravenous"
-   - "hs" → "at bedtime"
+RULES:
+- Separate medicine name from dosage
+- Standardize: od→once daily, bd→twice daily, tds→three times daily, iv→intravenous
+- Return ONLY the JSON below, NO explanations, NO markdown
 
-Return ONLY valid JSON in this exact format:
-{
-  "medicines": [
-    {
-      "name": "Clean medicine name only",
-      "dosage": "Strength and frequency",
-      "instructions": "Additional instructions if any"
-    }
-  ]
-}
+{"medicines":[{"name":"DrugName","dosage":"strength frequency","instructions":"extra info or null"}]}
 
 Examples:
-Input: "Metformin 500mg 1 tab OD"
-Output: {"medicines": [{"name": "Metformin", "dosage": "500mg once daily", "instructions": "1 tablet"}]}
+"Metformin 500mg OD" → {"medicines":[{"name":"Metformin","dosage":"500mg once daily","instructions":null}]}
+"Losartan 50mg, Amlodipine 5mg" → {"medicines":[{"name":"Losartan","dosage":"50mg","instructions":null},{"name":"Amlodipine","dosage":"5mg","instructions":null}]}
 
-Input: "Inj Remdesivir 100mg iv Day 1 followed by 100mg iv for 4 days"
-Output: {"medicines": [{"name": "Remdesivir", "dosage": "100mg intravenous", "instructions": "Day 1: 100mg, then 100mg daily for 4 days"}]}
-
-Input: "Losartan 50mg\nAmlodipine 5mg"
-Output: {"medicines": [{"name": "Losartan", "dosage": "50mg", "instructions": null}, {"name": "Amlodipine", "dosage": "5mg", "instructions": null}]}`;
+ONLY output JSON. No text before or after.`;
 
 /** 
  * Verified medicine database - Common generics, brands, and Philippine medicines
@@ -682,12 +665,20 @@ async function parseMedicinesWithAI(rawText: string, retries = 1): Promise<Parse
           break;
         }
 
-        // Parse JSON response
+        // Parse JSON response - handle various formats
         let jsonStr = content.trim();
-        if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
-        else if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
-        if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
-        jsonStr = jsonStr.trim();
+        
+        // Try to extract JSON from markdown code blocks
+        const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (codeBlockMatch) {
+          jsonStr = codeBlockMatch[1].trim();
+        } else {
+          // Try to find JSON object in the response (handles prose + JSON)
+          const jsonMatch = jsonStr.match(/\{[\s\S]*"medicines"[\s\S]*\}/); 
+          if (jsonMatch) {
+            jsonStr = jsonMatch[0];
+          }
+        }
 
         try {
           const parsed = JSON.parse(jsonStr);

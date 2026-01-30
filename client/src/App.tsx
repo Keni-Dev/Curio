@@ -1,23 +1,33 @@
-import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { cn } from '~lib/utils'
 import { Spinner } from '~components/ui'
 import { PointsAnimationProvider, AchievementToastProvider } from '~features/alay'
+import { RequireAuth } from '~features/auth'
 import { OfflineBanner, OfflineBannerSpacer } from '~components/ui/OfflineBanner'
 import { InstallPromptBanner } from '~components/ui/InstallPromptBanner'
 import { useInitialCache } from '~hooks/useInitialCache'
 import { useGeolocation } from '~hooks/useGeolocation'
 import { AccessibilityProvider } from '@/contexts/AccessibilityContext'
 import { useTranslation } from '@/lib/i18n'
+import { DevToolsPanel } from '@/components/dev/DevToolsPanel'
+import { useAuthStore } from '~stores/useAuthStore'
+import { BottomNavBar } from '~components/layout/BottomNavBar'
+import { AccessibilityFab } from '~components/AccessibilityFab'
 
 // Lazy load pages for bundle optimization
 const HomePage = lazy(() => import('~pages/HomePage'))
+const MapPage = lazy(() => import('~pages/MapPage'))
 const DesignSystemDemo = lazy(() => import('~pages/DesignSystemDemo'))
 const PharmacyPage = lazy(() => import('~pages/PharmacyPage'))
 const ProfilePage = lazy(() => import('~pages/ProfilePage'))
 const OcrScannerPage = lazy(() => import('~pages/OcrScannerPage'))
 const ChatPage = lazy(() => import('~pages/ChatPage'))
 const SearchResultsPage = lazy(() => import('~pages/SearchResultsPage'))
+const LoginPage = lazy(() => import('~pages/LoginPage'))
+const RegisterPage = lazy(() => import('~pages/RegisterPage'))
+const AuthCallbackPage = lazy(() => import('~pages/AuthCallbackPage'))
+const OnboardingPage = lazy(() => import('~pages/OnboardingPage'))
 
 // Loading fallback for lazy components
 const PageLoader = () => (
@@ -50,7 +60,7 @@ function PlaceholderPage({ title }: { title: string }) {
           )}
         >
           <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-          Back to Map
+          Back to Home
         </a>
       </div>
     </div>
@@ -86,6 +96,13 @@ function SkipLink() {
 }
 
 function AppContent() {
+  // Initialize auth state
+  const initializeAuth = useAuthStore((state) => state.initialize)
+  
+  useEffect(() => {
+    initializeAuth()
+  }, [initializeAuth])
+
   // Get user location for caching nearby pharmacies
   const { coordinates } = useGeolocation()
 
@@ -109,9 +126,25 @@ function AppContent() {
       <main id="main-content" tabIndex={-1}>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* Main Map View */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/map" element={<HomePage />} />
+            {/* Auth Routes (public) */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
+
+            {/* Home Dashboard (protected) */}
+            <Route path="/" element={
+              <RequireAuth>
+                <HomePage />
+              </RequireAuth>
+            } />
+
+            {/* Map View (protected) */}
+            <Route path="/map" element={
+              <RequireAuth>
+                <MapPage />
+              </RequireAuth>
+            } />
 
             {/* Design System Demo */}
             <Route path="/design-system" element={<DesignSystemDemo />} />
@@ -121,10 +154,28 @@ function AppContent() {
 
             {/* Pharmacy Detail */}
             <Route path="/pharmacy/:slug" element={<PharmacyPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/contribute" element={<PlaceholderPage title="Contribute" />} />
-            <Route path="/scanner" element={<OcrScannerPage />} />
-            <Route path="/chat" element={<ChatPage />} />
+            
+            {/* Protected Routes */}
+            <Route path="/profile" element={
+              <RequireAuth>
+                <ProfilePage />
+              </RequireAuth>
+            } />
+            <Route path="/contribute" element={
+              <RequireAuth>
+                <PlaceholderPage title="Contribute" />
+              </RequireAuth>
+            } />
+            <Route path="/scanner" element={
+              <RequireAuth>
+                <OcrScannerPage />
+              </RequireAuth>
+            } />
+            <Route path="/chat" element={
+              <RequireAuth>
+                <ChatPage />
+              </RequireAuth>
+            } />
 
             {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />
@@ -132,12 +183,21 @@ function AppContent() {
         </Suspense>
       </main>
 
+      {/* Bottom Navigation Bar (Mobile) */}
+      <BottomNavBar />
+
       {/* Global Gamification Providers */}
       <PointsAnimationProvider />
       <AchievementToastProvider />
 
       {/* PWA Install Prompt */}
       <InstallPromptBanner />
+
+      {/* Global Accessibility FAB */}
+      <AccessibilityFab />
+
+      {/* Dev Tools Panel (only in development) */}
+      <DevToolsPanel />
     </>
   )
 }

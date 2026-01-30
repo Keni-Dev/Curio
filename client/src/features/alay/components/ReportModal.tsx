@@ -11,14 +11,14 @@
  * - Rate limiting (30s cooldown, 50/day max)
  * - Duplicate report detection
  *
- * Uses BottomSheet for mobile-first presentation.
+ * Uses centered Modal for cleaner presentation.
  *
  * @see references/alay_stock_report_contribution/code.html
  */
 
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useAlayStore } from '@/stores/useAlayStore';
 import { useSubmitReport } from '../hooks/useSubmitReport';
@@ -67,7 +67,6 @@ export function ReportModal({
     isReportModalOpen,
     currentStep,
     reportDraft,
-    isSubmitting,
     todayReportCount,
     lastError,
     closeReportModal,
@@ -153,7 +152,22 @@ export function ReportModal({
   );
 
   const handleSubmit = useCallback(() => {
-    if (!reportDraft?.medicineId || !reportDraft?.status) return;
+    console.log('[ReportModal] handleSubmit called');
+    console.log('[ReportModal] reportDraft:', reportDraft);
+    
+    if (!reportDraft?.medicineId || !reportDraft?.status) {
+      console.log('[ReportModal] Missing medicineId or status, returning early');
+      return;
+    }
+
+    console.log('[ReportModal] Calling submitMutation.mutate with:', {
+      pharmacyId: reportDraft.pharmacyId,
+      medicineId: reportDraft.medicineId,
+      status: reportDraft.status,
+      notes: reportDraft.notes,
+      userLocation,
+      distanceFromPharmacy,
+    });
 
     submitMutation.mutate({
       pharmacyId: reportDraft.pharmacyId,
@@ -181,22 +195,6 @@ export function ReportModal({
     // Continue with the report flow - warning will be dismissed
   }, []);
 
-  // Determine modal snap point based on step
-  const snapPoint = useMemo(() => {
-    switch (currentStep) {
-      case 'proximity':
-        return 'half';
-      case 'medicine':
-        return 'full';
-      case 'status':
-        return 'half';
-      case 'confirmation':
-        return 'half';
-      default:
-        return 'half';
-    }
-  }, [currentStep]);
-
   // Can proceed from medicine step?
   const canProceedFromMedicine = reportDraft?.medicineId !== null && !showDuplicateWarning;
 
@@ -216,18 +214,43 @@ export function ReportModal({
 
   if (!isReportModalOpen) return null;
 
+  // Get modal title based on step
+  const getModalTitle = () => {
+    if (currentStep === 'confirmation') return undefined;
+    return ALAY_COPY.modalHeader;
+  };
+
+  // Get modal subtitle based on step  
+  const getModalSubtitle = () => {
+    if (currentStep === 'confirmation') return undefined;
+    if (currentStep === 'proximity') return 'Tiyakin na malapit ka sa pharmacy';
+    if (currentStep === 'medicine') return 'Pumili ng gamot na ire-report';
+    if (currentStep === 'status') return 'Ano ang status ng stock?';
+    return undefined;
+  };
+
   return (
-    <BottomSheet
+    <Modal
       isOpen={isReportModalOpen}
       onClose={handleClose}
-      defaultSnap={snapPoint}
+      size="lg"
       showCloseButton={currentStep !== 'confirmation'}
-      title={currentStep !== 'confirmation' ? ALAY_COPY.modalHeader : undefined}
+      title={getModalTitle()}
+      subtitle={getModalSubtitle()}
+      headerIcon={
+        currentStep !== 'confirmation' ? (
+          <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-primary text-[22px]">
+              volunteer_activism
+            </span>
+          </div>
+        ) : undefined
+      }
     >
-      <div className="px-4 pb-6">
+      <div className="space-y-4">
         {/* Offline Banner */}
         {!isOnline && currentStep !== 'confirmation' && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 mb-4">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
               <span className="material-symbols-outlined text-[18px]">cloud_off</span>
               <span className="text-sm font-medium">{ALAY_COPY.offlineBanner}</span>
@@ -260,17 +283,17 @@ export function ReportModal({
           <>
             {/* Step Indicator (not shown on confirmation) */}
             {currentStep !== 'confirmation' && (
-              <div className="flex items-center justify-center gap-2 mb-6">
+              <div className="flex items-center justify-center gap-2 mb-4">
                 {[1, 2, 3].map((step) => (
                   <div
                     key={step}
                     className={cn(
-                      'size-2 rounded-full transition-all',
+                      'h-1.5 rounded-full transition-all duration-300',
                       step === stepNumber
-                        ? 'w-6 bg-primary'
+                        ? 'w-8 bg-primary'
                         : step < stepNumber
-                        ? 'bg-primary/50'
-                        : 'bg-slate-200 dark:bg-white/10'
+                        ? 'w-4 bg-primary/40'
+                        : 'w-4 bg-slate-200 dark:bg-white/10'
                     )}
                   />
                 ))}
@@ -279,9 +302,7 @@ export function ReportModal({
 
             {/* Rate limit info (compact) - shown at top when not blocking */}
             {rateLimit && !isRateLimited && currentStep !== 'confirmation' && (
-              <div className="mb-4">
-                <RateLimitDisplay rateLimit={rateLimit} compact />
-              </div>
+              <RateLimitDisplay rateLimit={rateLimit} compact />
             )}
 
         {/* Step Content */}
@@ -300,6 +321,7 @@ export function ReportModal({
               pharmacyId={reportDraft.pharmacyId}
               selectedId={reportDraft.medicineId}
               onSelect={handleMedicineSelect}
+              remainingReports={rateLimit ? rateLimit.reportsRemaining : undefined}
             />
 
             {/* Duplicate Warning */}
@@ -332,18 +354,22 @@ export function ReportModal({
 
         {currentStep === 'status' && reportDraft && (
           <div className="space-y-4">
-            {/* Selected Medicine Display */}
+            {/* Selected Medicine Display - Enhanced soft mint style */}
             {reportDraft.medicineName && (
-              <div className="bg-primary/5 dark:bg-primary/10 rounded-xl p-4 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="size-12 rounded-lg bg-white dark:bg-white/10 flex items-center justify-center shadow-sm">
-                    <span className="material-symbols-outlined text-primary text-[24px]">
+              <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/15 rounded-2xl p-4 mb-2 border border-primary/10">
+                <div className="flex items-center gap-4">
+                  <div className="size-14 rounded-xl bg-white dark:bg-white/10 flex items-center justify-center shadow-sm border border-primary/10">
+                    <span className="material-symbols-outlined text-primary text-[28px]">
                       medication
                     </span>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted">Gamot:</p>
-                    <p className="font-bold text-text-primary">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full">
+                        Tablet
+                      </span>
+                    </div>
+                    <p className="font-bold text-text-primary text-lg truncate">
                       {reportDraft.medicineName}
                     </p>
                   </div>
@@ -354,7 +380,8 @@ export function ReportModal({
             <StatusSelector
               value={reportDraft.status}
               onChange={handleStatusSelect}
-              disabled={isSubmitting}
+              onSkip={handleClose}
+              disabled={submitMutation.isPending}
             />
 
             {/* Error Display */}
@@ -371,8 +398,8 @@ export function ReportModal({
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={!canSubmit || isSubmitting}
-                loading={isSubmitting}
+                disabled={!canSubmit || submitMutation.isPending}
+                loading={submitMutation.isPending}
                 className="flex-1"
               >
                 {ALAY_COPY.submitButton}
@@ -410,7 +437,7 @@ export function ReportModal({
           </>
         )}
       </div>
-    </BottomSheet>
+    </Modal>
   );
 }
 

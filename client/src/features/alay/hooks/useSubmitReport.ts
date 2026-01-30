@@ -157,8 +157,11 @@ export function useSubmitReport(options: UseSubmitReportOptions = {}) {
 
   return useMutation({
     mutationFn: async (input: SubmitReportInput) => {
+      console.log('[useSubmitReport] mutationFn called with:', input);
+      
       // Check if online
       if (!navigator.onLine) {
+        console.log('[useSubmitReport] User is offline, queueing report');
         // Queue for later
         if (reportDraft) {
           queueReport(
@@ -180,10 +183,12 @@ export function useSubmitReport(options: UseSubmitReportOptions = {}) {
         } as SubmitReportResult & { queued?: boolean };
       }
 
+      console.log('[useSubmitReport] User is online, submitting report');
       return submitStockReport(input);
     },
 
     onSuccess: (result) => {
+      console.log('[useSubmitReport] onSuccess:', result);
       // Update local state
       markReportSuccess();
       setStreak(result.newStreak);
@@ -211,6 +216,7 @@ export function useSubmitReport(options: UseSubmitReportOptions = {}) {
     },
 
     onError: (error: Error) => {
+      console.error('[useSubmitReport] onError:', error);
       setLastError(error.message);
       options.onError?.(error);
     },

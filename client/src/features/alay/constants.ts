@@ -141,11 +141,30 @@ export const ALAY_COPY = {
   locationDenied: 'Hindi namin makuha ang iyong lokasyon',
   enableLocation: 'I-enable ang location services',
 
-  // Status options
+  // Status options (legacy 3-button)
   statusInStock: 'May Stock',
   statusLowStock: 'Konti Na Lang',
   statusOutOfStock: 'Wala Na',
   skipOption: 'Hindi ko alam / Skip',
+
+  // Status options (new 2-button layout)
+  statusYes: 'OO, MERON',
+  statusNo: 'WALA NA',
+  statusYesSubtext: 'Available sa pharmacy',
+  statusNoSubtext: 'Out of stock',
+  lowStockToggle: 'Konti na lang?',
+  skipLink: "Di ko alam / Skip this item",
+
+  // Medicine selector
+  medicineSearchPlaceholder: 'Hanapin ang gamot...',
+  commonMedicinesLabel: 'Karaniwang gamot',
+  photoUploadLabel: 'Mag-upload ng litrato',
+  photoComingSoon: 'COMING SOON',
+  remainingReports: (count: number, max: number) => `${count}/${max} natitira`,
+
+  // Step questions
+  statusQuestion: 'Meron ba nito sa pharmacy?',
+  medicineQuestion: 'Anong gamot ang ire-report mo?',
 
   // Success
   successHeadline: 'Salamat, Bayani!',

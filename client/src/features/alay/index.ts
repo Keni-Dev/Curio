@@ -42,6 +42,8 @@ export { useSubmitReport } from './hooks/useSubmitReport';
 export { usePendingReports, useOnlineStatus } from './hooks/usePendingReports';
 export { useAlayPoints, useHasAlayProfile, useUserLevel, alayProfileKeys } from './hooks/useAlayPoints';
 export { useLeaderboard, useTopContributors, useWeeklyLeaderboard, leaderboardKeys } from './hooks/useLeaderboard';
+export { useUserActivity, userActivityKeys } from './hooks/useUserActivity';
+export type { UserActivity } from './hooks/useUserActivity';
 
 // Anti-Abuse Hooks
 export { useRateLimit, rateLimitKeys, formatCooldown, getDailyLimitPercentage } from './hooks/useRateLimit';

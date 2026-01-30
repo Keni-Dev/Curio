@@ -199,17 +199,17 @@ export function ThankYouConfirmation({
         </div>
 
         {/* Progress Bar with Shimmer */}
-        <div className="w-full bg-slate-200 dark:bg-white/10 rounded-full h-2.5 overflow-hidden">
+        <div className="w-full bg-slate-200 dark:bg-white/10 rounded-full h-3 overflow-hidden">
           <div
-            className="bg-primary h-full rounded-full relative overflow-hidden transition-all duration-1000"
+            className="bg-gradient-to-r from-primary to-primary-light h-full rounded-full relative overflow-hidden transition-all duration-1000"
             style={{ width: `${progress}%` }}
           >
-            {/* Shimmer effect */}
+            {/* Shimmer effect - animated gradient sweep */}
             <div
-              className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12"
+              className="absolute inset-0 w-full h-full"
               style={{
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
                 animation: `shimmer ${ALAY_ANIMATIONS.SHIMMER_DURATION}ms infinite`,
-                transform: 'translateX(-100%)',
               }}
             />
           </div>
@@ -220,6 +220,7 @@ export function ThankYouConfirmation({
       <Button
         onClick={onClose}
         fullWidth
+        size="lg"
         className={cn(
           'transition-all duration-500 delay-500',
           showAnimation ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'

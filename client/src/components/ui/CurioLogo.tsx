@@ -81,7 +81,7 @@ export function CurioBrand({
   }[variant];
 
   return (
-    <div className={cn('flex items-center gap-3', className)}>
+    <div className={cn('flex items-center gap-1.5', className)}>
       <CurioLogo size={logoSize} variant={variant} />
       {showWordmark && (
         <span className={cn('text-xl font-bold tracking-tight', textColorClass)}>

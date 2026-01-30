@@ -171,6 +171,34 @@ export const en = {
   },
 
   // ==========================================================================
+  // Auth
+  // ==========================================================================
+  auth: {
+    welcomeBack: 'Welcome back',
+    signInSubtitle: 'Please enter your details to sign in.',
+    emailAddress: 'Email Address',
+    emailPlaceholder: 'juan@example.com',
+    password: 'Password',
+    passwordPlaceholder: 'Enter your password',
+    forgotPassword: 'Forgot your password?',
+    signIn: 'Sign in',
+    signingIn: 'Signing in...',
+    orContinueWith: 'Or continue with',
+    signInWithGoogle: 'Sign in with Google',
+    noAccount: "Don't have an account?",
+    signUp: 'Sign up',
+    hasAccount: 'Already have an account?',
+    bayanihanTitle: 'Bayanihan sa',
+    bayanihanSubtitle: 'Kalusugan',
+    bayanihanDesc: 'Join a community dedicated to crowdsourced medicine tracking. Together, we make healthcare accessible for everyone.',
+    copyright: '© 2023 Curio Health. All rights reserved.',
+    emailRequired: 'Email is required',
+    emailInvalid: 'Please enter a valid email',
+    passwordRequired: 'Password is required',
+    signInFailed: 'Sign in failed',
+  },
+
+  // ==========================================================================
   // Profile
   // ==========================================================================
   profile: {
@@ -194,6 +222,33 @@ export const en = {
     permissionDenied: 'Permission denied.',
     notFound: 'Page not found',
     serverError: 'Server error. Please try again later.',
+  },
+
+  // ==========================================================================
+  // Onboarding
+  // ==========================================================================
+  onboarding: {
+    skip: 'Skip',
+    next: 'Next',
+    getStarted: 'Get Started',
+    enableLocation: 'Enable Location',
+    // Slide 1 - Welcome
+    welcomeBadge: 'Medicine Finder',
+    welcomeTitle: 'Find the Cure, Faster',
+    welcomeDescription: 'Curio is like Waze for medicines. Find real-time availability of medicines at pharmacies near you.',
+    // Slide 2 - Search
+    searchBadge: 'Smart Search',
+    searchTitle: 'Tingnan ang Gamot Mo',
+    searchDescription: 'Search any medicine and instantly see which nearby pharmacies have it in stock. No more wasted trips.',
+    // Slide 3 - Community
+    communityBadge: 'Community Power',
+    communityTitle: 'Tayo-tayo ang Magkakatulong',
+    communityDescription: 'Report stock availability and earn Alay Points. Your contributions help save lives in real-time.',
+    // Slide 4 - Get Started
+    startBadge: 'Ready to Go',
+    startTitle: 'Magsimula Na Tayo',
+    startDescription: 'Enable location to see pharmacies near you and start finding medicines faster than ever.',
+    locationPermission: 'We need your location to show nearby pharmacies',
   },
 
   // ==========================================================================

@@ -119,6 +119,8 @@ async function fetchNearbyPharmacies(
   center: Coordinates,
   radiusMeters: number
 ): Promise<PharmacyWithStock[]> {
+  console.log('[fetchNearbyPharmacies] Fetching pharmacies...', { center, radiusMeters });
+  
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any).rpc('find_nearby_pharmacies', {
     user_lat: center.lat,
@@ -127,9 +129,11 @@ async function fetchNearbyPharmacies(
   });
 
   if (error) {
-    console.error('Error fetching nearby pharmacies:', error);
+    console.error('[fetchNearbyPharmacies] Error:', error);
     throw new Error(error.message);
   }
+
+  console.log('[fetchNearbyPharmacies] Got data:', data?.length ?? 0, 'pharmacies');
 
   if (!data) {
     return [];

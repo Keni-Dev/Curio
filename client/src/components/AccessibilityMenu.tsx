@@ -94,7 +94,7 @@ function ToggleSwitch({
             onChange();
           }
         }}
-        style={{ width: '44px', height: '24px' }}
+        style={{ width: '44px', height: '24px', minWidth: '44px', minHeight: '24px' }}
         className={cn(
           // Track
           'relative rounded-full cursor-pointer shrink-0',

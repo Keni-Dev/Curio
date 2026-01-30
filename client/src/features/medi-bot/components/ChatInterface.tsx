@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { useOpenRouter } from '../hooks/useOpenRouter';
+import { useMediBot } from '../hooks/useMediBot';
 import { MedicalDisclaimer } from './MedicalDisclaimer';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
@@ -17,7 +17,7 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ className }: ChatInterfaceProps) {
-  const { messages, isLoading, sendMessage, clearMessages } = useOpenRouter();
+  const { messages, isLoading, sendMessage, clearMessages } = useMediBot();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 

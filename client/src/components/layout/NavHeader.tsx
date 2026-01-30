@@ -9,6 +9,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '~lib/utils';
 import { CurioBrand } from '~components/ui/CurioLogo';
+import ProfileMenu from '~components/ui/ProfileMenu';
 
 // =============================================================================
 // TYPES
@@ -17,6 +18,11 @@ import { CurioBrand } from '~components/ui/CurioLogo';
 interface NavItem {
   label: string;
   path: string;
+}
+
+interface NavHeaderProps {
+  /** Visual style variant */
+  variant?: 'glass' | 'solid';
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -30,34 +36,31 @@ const NAV_ITEMS: NavItem[] = [
 // NAV HEADER COMPONENT
 // =============================================================================
 
-const NavHeader: React.FC = () => {
+const NavHeader: React.FC<NavHeaderProps> = ({ variant = 'glass' }) => {
   const location = useLocation();
   const currentPath = location.pathname;
 
   // Check if path matches
   const isActive = (path: string) => {
-    if (path === '/') {
-      return currentPath === '/' || currentPath === '/map';
-    }
     return currentPath === path;
   };
 
   return (
     <header className="w-full p-4 pointer-events-auto relative z-50">
       <div className="mx-auto max-w-[1440px]">
-        {/* Glass Panel Header */}
+        {/* Nav Header */}
         <div
           className={cn(
             'rounded-full px-6 py-3.5 flex items-center justify-between',
-            'bg-white/50 backdrop-blur-xl',
-            'border border-white/15',
-            'shadow-[0_8px_32px_0_rgba(31,38,135,0.08)]'
+            variant === 'glass'
+              ? 'bg-white/50 backdrop-blur-xl border border-white/15 shadow-[0_8px_32px_0_rgba(31,38,135,0.08)]'
+              : 'bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700'
           )}
         >
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 shrink-0 group">
+          <Link to="/" className="flex items-center gap-3 shrink-0 group ml-2" tabIndex={-1}>
             <div className="group-hover:scale-110 transition-transform duration-300">
-              <CurioBrand logoSize={32} variant="primary" />
+              <CurioBrand logoSize={28} variant="primary" />
             </div>
           </Link>
 
@@ -91,13 +94,8 @@ const NavHeader: React.FC = () => {
               </span>
             </button>
 
-            {/* User Avatar */}
-            <div
-              className="size-10 rounded-full bg-primary flex items-center justify-center text-white cursor-pointer"
-              aria-label="Profile"
-            >
-              <span className="material-symbols-outlined">person</span>
-            </div>
+            {/* Profile Menu */}
+            <ProfileMenu />
           </div>
         </div>
       </div>

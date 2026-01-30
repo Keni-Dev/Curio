@@ -14,6 +14,17 @@ export {
   selectCanSubmit,
 } from './useAlayStore';
 
+// Auth store
+export {
+  useAuthStore,
+  selectUser,
+  selectProfile,
+  selectSession,
+  selectIsAuthenticated,
+  selectIsLoading,
+  selectIsInitialized,
+} from './useAuthStore';
+
 // Gamification stores
 export {
   usePointsDisplayStore,
@@ -30,3 +41,11 @@ export {
   triggerAchievementUnlock,
   dismissCurrentAchievement,
 } from './useAchievementDisplayStore';
+
+// Dev tools (only active in development)
+export {
+  useDevToolsStore,
+  selectMockLocation,
+  selectBypassProximity,
+  isDevMode,
+} from './useDevToolsStore';

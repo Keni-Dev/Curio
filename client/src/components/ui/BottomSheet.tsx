@@ -8,6 +8,7 @@
  * - Keyboard escape to close
  * - Body scroll lock when open
  * - Smooth slide-up animation
+ * - Portal rendering for proper z-index stacking
  *
  * @see DESIGN_SYSTEM.md - Bottom Sheet Header section
  */
@@ -18,6 +19,7 @@ import {
   type ReactNode,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
 // =============================================================================
@@ -164,7 +166,7 @@ export function BottomSheet({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -238,6 +240,7 @@ export function BottomSheet({
           {children}
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

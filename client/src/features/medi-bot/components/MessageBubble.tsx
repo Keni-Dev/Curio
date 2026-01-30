@@ -3,6 +3,7 @@
  * Chat message display with user/assistant styling
  */
 
+import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/utils';
 import type { MessageBubbleProps } from '../types';
@@ -19,7 +20,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           <div
             className={cn(
               'px-4 py-3',
-              'bg-primary text-slate-900',
+              'bg-primary text-white',
               'rounded-2xl rounded-tr-none',
               'shadow-md shadow-primary/20',
               'text-[15px] leading-relaxed font-medium'
@@ -62,7 +63,30 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             'text-[15px] leading-relaxed'
           )}
         >
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          <div className="whitespace-pre-wrap break-words medi-bot-markdown">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                em: ({ children }) => <em className="italic">{children}</em>,
+                ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                li: ({ children }) => <li>{children}</li>,
+                a: ({ href, children }) => (
+                  <a href={href} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                    {children}
+                  </a>
+                ),
+                code: ({ children }) => (
+                  <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-sm font-mono">
+                    {children}
+                  </code>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
         </div>
         {!isWelcome && (
           <span className="text-xs text-text-muted ml-1">
