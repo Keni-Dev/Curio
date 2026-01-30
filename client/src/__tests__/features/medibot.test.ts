@@ -220,9 +220,9 @@ describe('Chat Message Processing', () => {
     ];
 
     expect(conversationHistory).toHaveLength(3);
-    expect(conversationHistory[0].role).toBe('user');
-    expect(conversationHistory[1].role).toBe('assistant');
-    expect(conversationHistory[2].role).toBe('user');
+    expect(conversationHistory[0]?.role).toBe('user');
+    expect(conversationHistory[1]?.role).toBe('assistant');
+    expect(conversationHistory[2]?.role).toBe('user');
   });
 
   it('should include system prompt in conversation', () => {
@@ -235,9 +235,9 @@ Always provide disclaimers for medical advice.`;
       { role: 'user' as const, content: 'Hello!' },
     ];
 
-    expect(messages[0].role).toBe('system');
-    expect(messages[0].content).toContain('MediBot');
-    expect(messages[0].content).toContain('disclaimer');
+    expect(messages[0]?.role).toBe('system');
+    expect(messages[0]?.content).toContain('MediBot');
+    expect(messages[0]?.content).toContain('disclaimer');
   });
 });
 

@@ -45,8 +45,8 @@ const toOpenRouterMessages = (messages: Message[]) => {
   ];
 };
 
-/** Call Gemini API with retry support */
-async function callGeminiAPI(
+/** Call Gemini API with retry support (reserved for future Gemini fallback) */
+export async function _callGeminiAPI(
   messages: Message[],
   signal: AbortSignal,
   retryCount = 0
@@ -94,7 +94,7 @@ async function callGeminiAPI(
       if (!isQuotaExhausted && retrySeconds <= 60) {
         console.log(`[Medi-Bot] Gemini rate limited, waiting ${retrySeconds}s before retry...`);
         await new Promise(resolve => setTimeout(resolve, retrySeconds * 1000));
-        return callGeminiAPI(messages, signal, retryCount + 1);
+        return _callGeminiAPI(messages, signal, retryCount + 1);
       }
     }
     

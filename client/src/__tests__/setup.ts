@@ -35,16 +35,33 @@ export const mockGeolocationState = {
         altitudeAccuracy: null,
         heading: null,
         speed: null,
+        toJSON() {
+          return {
+            latitude: 14.8527,
+            longitude: 120.8157,
+            accuracy: 10,
+            altitude: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+          };
+        },
       },
       timestamp: Date.now(),
-    } as GeolocationPosition);
+      toJSON() {
+        return {
+          coords: this.coords,
+          timestamp: this.timestamp,
+        };
+      },
+    });
   },
 };
 
 beforeAll(() => {
   // Mock navigator.geolocation with configurable: true so tests can override
   const mockGeolocation = {
-    getCurrentPosition: vi.fn((success, error, options) => {
+    getCurrentPosition: vi.fn((success: PositionCallback) => {
       mockGeolocationState.getCurrentPositionImpl(success);
     }),
     watchPosition: vi.fn(() => 1),
@@ -145,17 +162,33 @@ beforeAll(() => {
  * Create a mock geolocation position
  */
 export function createMockPosition(lat = 14.8527, lng = 120.8157): GeolocationPosition {
-  return {
-    coords: {
-      latitude: lat,
-      longitude: lng,
-      accuracy: 10,
-      altitude: null,
-      altitudeAccuracy: null,
-      heading: null,
-      speed: null,
+  const coords = {
+    latitude: lat,
+    longitude: lng,
+    accuracy: 10,
+    altitude: null,
+    altitudeAccuracy: null,
+    heading: null,
+    speed: null,
+    toJSON() {
+      return {
+        latitude: lat,
+        longitude: lng,
+        accuracy: 10,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
+      };
     },
-    timestamp: Date.now(),
+  };
+  const timestamp = Date.now();
+  return {
+    coords,
+    timestamp,
+    toJSON() {
+      return { coords, timestamp };
+    },
   };
 }
 

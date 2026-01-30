@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { cn } from '~lib/utils'
 import { Spinner } from '~components/ui'
 import { PointsAnimationProvider, AchievementToastProvider } from '~features/alay'

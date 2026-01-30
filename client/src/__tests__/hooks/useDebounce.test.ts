@@ -121,7 +121,7 @@ describe('useDebounce', () => {
   });
 
   it('should cleanup timeout on unmount', () => {
-    const { result, rerender, unmount } = renderHook(
+    const { rerender, unmount } = renderHook(
       ({ value }) => useDebounce(value, 300),
       { initialProps: { value: 'initial' } }
     );

@@ -185,10 +185,10 @@ describe('PharmacyCard', () => {
       });
       renderWithRouter(<PharmacyCard pharmacy={pharmacy} compact />);
       // Chain name should not be visible (would be in a <p> with text-xs text-muted)
-      const chainElement = screen.queryByText('Some Chain');
       // In compact mode, chainName is not rendered
       // But if pharmacy name IS "Some Chain", it would show
       // Let's be specific
+      expect(screen.queryByText('Some Chain')).not.toBeInTheDocument();
       expect(screen.getByText('Pharmacy Name')).toBeInTheDocument();
     });
   });

@@ -7,8 +7,6 @@
  * @see DESIGN_SYSTEM.md for design tokens
  */
 
-import { cn } from '~lib/utils';
-
 interface OnboardingProgressProps {
   /** Total number of slides */
   total: number;

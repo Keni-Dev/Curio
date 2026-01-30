@@ -230,7 +230,7 @@ describe('Button', () => {
     const ref = vi.fn();
     render(<Button ref={ref}>With Ref</Button>);
     expect(ref).toHaveBeenCalled();
-    expect(ref.mock.calls[0][0]).toBeInstanceOf(HTMLButtonElement);
+    expect(ref.mock.calls[0]?.[0]).toBeInstanceOf(HTMLButtonElement);
   });
 
   // =============================================================================
