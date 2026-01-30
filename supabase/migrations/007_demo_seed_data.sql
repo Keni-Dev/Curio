@@ -354,6 +354,99 @@ VALUES
 );
 
 -- -----------------------------------------------------------------------------
+-- INVENTORY REPORTS - Bulacan Medical Center Pharmacy (Hospital)
+-- -----------------------------------------------------------------------------
+
+DELETE FROM inventory_reports 
+WHERE pharmacy_id = 'f6a7b8c9-d0e1-9f0a-3b4c-5d6e7f8a9b0c'
+  AND reported_by IN (
+    'd0000001-d000-d000-d000-d00000000001',
+    'd0000002-d000-d000-d000-d00000000002',
+    'd0000003-d000-d000-d000-d00000000003'
+  );
+
+INSERT INTO inventory_reports (pharmacy_id, medicine_id, reported_by, status, price, notes, helpful_count, not_helpful_count, created_at, expires_at)
+VALUES 
+-- Biogesic - In Stock - Fresh (10 min ago)
+(
+  'f6a7b8c9-d0e1-9f0a-3b4c-5d6e7f8a9b0c',
+  '11111111-1111-1111-1111-111111111111',
+  'd0000001-d000-d000-d000-d00000000001',
+  'in_stock',
+  7.50,
+  '24/7 available sa hospital pharmacy',
+  18,
+  1,
+  NOW() - INTERVAL '10 minutes',
+  NOW() + INTERVAL '4 hours' - INTERVAL '10 minutes'
+),
+-- Advil - In Stock - Fresh (30 min ago)
+(
+  'f6a7b8c9-d0e1-9f0a-3b4c-5d6e7f8a9b0c',
+  '22222222-2222-2222-2222-222222222222',
+  'd0000003-d000-d000-d000-d00000000003',
+  'in_stock',
+  16.00,
+  'Maraming stock, hospital grade',
+  22,
+  2,
+  NOW() - INTERVAL '30 minutes',
+  NOW() + INTERVAL '4 hours' - INTERVAL '30 minutes'
+),
+-- Dolfenal - Low Stock - Fresh (45 min ago)
+(
+  'f6a7b8c9-d0e1-9f0a-3b4c-5d6e7f8a9b0c',
+  '33333333-3333-3333-3333-333333333333',
+  'd0000002-d000-d000-d000-d00000000002',
+  'low_stock',
+  19.00,
+  'Konti na lang, may resupply bukas',
+  8,
+  1,
+  NOW() - INTERVAL '45 minutes',
+  NOW() + INTERVAL '4 hours' - INTERVAL '45 minutes'
+),
+-- Neozep - In Stock - Aging (1.5 hours ago)
+(
+  'f6a7b8c9-d0e1-9f0a-3b4c-5d6e7f8a9b0c',
+  '44444444-4444-4444-4444-444444444444',
+  'd0000001-d000-d000-d000-d00000000001',
+  'in_stock',
+  11.00,
+  'Available sa outpatient pharmacy',
+  14,
+  0,
+  NOW() - INTERVAL '1 hour 30 minutes',
+  NOW() + INTERVAL '4 hours' - INTERVAL '1 hour 30 minutes'
+),
+-- Kremil-S - In Stock - Aging (2 hours ago)
+(
+  'f6a7b8c9-d0e1-9f0a-3b4c-5d6e7f8a9b0c',
+  '66666666-6666-6666-6666-666666666666',
+  'd0000003-d000-d000-d000-d00000000003',
+  'in_stock',
+  8.00,
+  'OTC section',
+  11,
+  2,
+  NOW() - INTERVAL '2 hours',
+  NOW() + INTERVAL '4 hours' - INTERVAL '2 hours'
+),
+-- Claritin - Out of Stock - Stale (3 hours ago)
+(
+  'f6a7b8c9-d0e1-9f0a-3b4c-5d6e7f8a9b0c',
+  '88888888-8888-8888-8888-888888888888',
+  'd0000002-d000-d000-d000-d00000000002',
+  'out_of_stock',
+  NULL,
+  'Wala na, try Mercury Drug malapit',
+  5,
+  3,
+  NOW() - INTERVAL '3 hours',
+  NOW() + INTERVAL '4 hours' - INTERVAL '3 hours'
+);
+
+-- -----------------------------------------------------------------------------
 -- HELPFUL VOTES (for demo reports)
 -- -----------------------------------------------------------------------------
 
@@ -367,4 +460,5 @@ BEGIN
   RAISE NOTICE 'TGP Malolos: 7 inventory reports';
   RAISE NOTICE 'Mercury Drug BulSU: 5 inventory reports';
   RAISE NOTICE 'Watsons SM Malolos: 4 inventory reports';
+  RAISE NOTICE 'Bulacan Medical Center Pharmacy: 6 inventory reports';
 END $$;

@@ -27,12 +27,26 @@ import { cn } from '~lib/utils';
 interface SearchBarProps {
   /** Callback when a medicine is selected */
   onSelect?: (medicine: MedicineSearchResult) => void;
+  /** Callback when user presses Enter to search (navigates with query text) */
+  onSearch?: (query: string) => void;
   /** Placeholder text */
   placeholder?: string;
   /** Additional CSS classes */
   className?: string;
   /** Auto focus on mount */
   autoFocus?: boolean;
+  /** Controlled value (for use on search results page) */
+  value?: string;
+  /** Controlled onChange (for use on search results page) */
+  onChange?: (value: string) => void;
+  /** Controlled onClear (for use on search results page) */
+  onClear?: () => void;
+  /** External results (for controlled mode) */
+  results?: MedicineSearchResult[];
+  /** External loading state (for controlled mode) */
+  isLoading?: boolean;
+  /** Control whether to show dropdown */
+  showDropdown?: boolean;
 }
 
 // =============================================================================
@@ -41,10 +55,20 @@ interface SearchBarProps {
 
 export const SearchBar: React.FC<SearchBarProps> = ({
   onSelect,
+  onSearch,
   placeholder = 'Maghanap ng gamot...',
   className,
   autoFocus = false,
+  value: controlledValue,
+  onChange: controlledOnChange,
+  onClear: controlledOnClear,
+  results: controlledResults,
+  isLoading: controlledIsLoading,
+  showDropdown: controlledShowDropdown,
 }) => {
+  // Determine if we're in controlled mode
+  const isControlled = controlledValue !== undefined;
+
   // Refs
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,8 +76,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   // Local state
   const [isMounted, setIsMounted] = useState(false);
 
-  // Store state
-  const query = useSearchStore((s) => s.query);
+  // Store state (only used in uncontrolled mode)
+  const storeQuery = useSearchStore((s) => s.query);
   const isOpen = useSearchStore((s) => s.isOpen);
   const isFocused = useSearchStore((s) => s.isFocused);
   const highlightedIndex = useSearchStore((s) => s.highlightedIndex);
@@ -65,13 +89,21 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const selectMedicine = useSearchStore((s) => s.selectMedicine);
   const addRecentSearch = useSearchStore((s) => s.addRecentSearch);
 
-  // Debounced query for API calls
+  // Use controlled or uncontrolled value
+  const query = isControlled ? controlledValue : storeQuery;
+
+  // Debounced query for API calls (only in uncontrolled mode)
   const debouncedQuery = useDebounce(query, 300);
 
-  // Search query
-  const { data: results, isLoading, isQueryValid } = useSearchMedicines({
+  // Search query (only in uncontrolled mode)
+  const { data: uncontrolledResults, isLoading: uncontrolledIsLoading, isQueryValid } = useSearchMedicines({
     query: debouncedQuery,
+    enabled: !isControlled,
   });
+
+  // Use controlled or uncontrolled results
+  const results = isControlled ? controlledResults : uncontrolledResults;
+  const isLoading = isControlled ? (controlledIsLoading ?? false) : uncontrolledIsLoading;
 
   // Voice search
   const {
@@ -120,9 +152,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   // Handlers
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setQuery(e.target.value);
+      if (isControlled) {
+        controlledOnChange?.(e.target.value);
+      } else {
+        setQuery(e.target.value);
+      }
     },
-    [setQuery]
+    [isControlled, controlledOnChange, setQuery]
   );
 
   const handleFocus = useCallback(() => {
@@ -132,22 +168,36 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
   const handleBlur = useCallback(() => {
     // Delay to allow click events on dropdown items
+    // 200ms is needed to ensure the click event fires before dropdown closes
     setTimeout(() => {
       setIsFocused(false);
-    }, 150);
+    }, 200);
   }, [setIsFocused]);
 
   const handleClear = useCallback(() => {
-    clearQuery();
+    if (isControlled) {
+      controlledOnClear?.();
+    } else {
+      clearQuery();
+    }
     inputRef.current?.focus();
-  }, [clearQuery]);
+  }, [isControlled, controlledOnClear, clearQuery]);
 
   const handleMedicineSelect = useCallback(
     (medicine: MedicineSearchResult) => {
+      // Close dropdown first
+      setIsOpen(false);
+      setIsFocused(false);
+      // Clear the query from store (so dropdown doesn't show stale results)
+      if (!isControlled) {
+        setQuery(medicine.brand_name || medicine.generic_name);
+      }
+      // Store selection and call callback
       selectMedicine(medicine);
+      addRecentSearch(medicine.brand_name || medicine.generic_name);
       onSelect?.(medicine);
     },
-    [selectMedicine, onSelect]
+    [isControlled, setIsOpen, setIsFocused, setQuery, selectMedicine, addRecentSearch, onSelect]
   );
 
   const handleRecentSelect = useCallback(
@@ -195,9 +245,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         case 'Enter':
           e.preventDefault();
           if (highlightedIndex >= 0 && results?.[highlightedIndex]) {
+            // Select the highlighted result
             handleMedicineSelect(results[highlightedIndex]);
+          } else if (results && results.length > 0 && results[0]) {
+            // No item highlighted, select the first result
+            handleMedicineSelect(results[0]);
           } else if (query.trim()) {
+            // No results available yet, navigate with query text
             addRecentSearch(query.trim());
+            setIsOpen(false);
+            setIsFocused(false);
+            onSearch?.(query.trim());
           }
           break;
 
@@ -221,8 +279,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   );
 
   // Determine what to show in dropdown
-  const showRecentSearches = isFocused && !query.trim();
-  const showResults = isQueryValid && (isLoading || (results && results.length >= 0));
+  const showRecentSearches = !isControlled && isFocused && !query.trim();
+  const showResults = isControlled
+    ? (controlledShowDropdown ?? false)
+    : (isQueryValid && (isLoading || (results && results.length >= 0)));
 
   return (
     <div

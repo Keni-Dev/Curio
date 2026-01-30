@@ -7,6 +7,8 @@
  * @see references/alay_stock_report_contribution/code.html
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -55,7 +57,8 @@ const COMMON_MEDICINES: QuickSelectMedicine[] = [
 async function searchMedicines(query: string): Promise<Medicine[]> {
   if (!query || query.length < 2) return [];
 
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
     .from('medicines')
     .select('id, brand_name, generic_name, dosage, form, category, requires_prescription')
     .or(`brand_name.ilike.%${query}%,generic_name.ilike.%${query}%`)
@@ -63,7 +66,7 @@ async function searchMedicines(query: string): Promise<Medicine[]> {
 
   if (error) throw error;
 
-  return (data || []).map((row) => ({
+  return (data || []).map((row: any) => ({
     id: row.id,
     brandName: row.brand_name || undefined,
     genericName: row.generic_name,

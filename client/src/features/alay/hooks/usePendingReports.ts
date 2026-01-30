@@ -48,7 +48,8 @@ export function usePendingReports() {
         throw new Error('Invalid report data');
       }
 
-      const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
         .from('inventory_reports')
         .insert({
           pharmacy_id: draft.pharmacyId,

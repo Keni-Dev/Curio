@@ -119,7 +119,8 @@ async function fetchNearbyPharmacies(
   center: Coordinates,
   radiusMeters: number
 ): Promise<PharmacyWithStock[]> {
-  const { data, error } = await supabase.rpc('find_nearby_pharmacies', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc('find_nearby_pharmacies', {
     user_lat: center.lat,
     user_lng: center.lng,
     radius_meters: radiusMeters,

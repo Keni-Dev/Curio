@@ -3,9 +3,11 @@ import { cn } from '@/lib/utils';
 interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  /** Label for screen readers */
+  label?: string;
 }
 
-export function Spinner({ size = 'md', className }: SpinnerProps) {
+export function Spinner({ size = 'md', className, label = 'Loading' }: SpinnerProps) {
   const sizes = {
     sm: 'h-4 w-4',
     md: 'h-8 w-8',
@@ -17,6 +19,8 @@ export function Spinner({ size = 'md', className }: SpinnerProps) {
       className={cn('animate-spin text-primary', sizes[size], className)}
       fill="none"
       viewBox="0 0 24 24"
+      role="status"
+      aria-label={label}
     >
       <circle
         className="opacity-25"

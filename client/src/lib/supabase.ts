@@ -234,6 +234,10 @@ export function createPoint(lat: number, lng: number): string {
 // DATABASE FUNCTION WRAPPERS
 // ============================================================================
 
+// Note: Using type assertions because Supabase types are auto-generated
+// and may not include custom RPC functions. Regenerate types with:
+// npx supabase gen types typescript --local > src/types/database.ts
+
 /**
  * Find pharmacies near a location using the database function.
  *
@@ -246,7 +250,8 @@ export async function findNearbyPharmacies(
   lng: number,
   radiusMeters: number = 2000
 ) {
-  return supabase.rpc('find_nearby_pharmacies', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (supabase as any).rpc('find_nearby_pharmacies', {
     user_lat: lat,
     user_lng: lng,
     radius_meters: radiusMeters,
@@ -260,7 +265,8 @@ export async function findNearbyPharmacies(
  * @param limit - Maximum results to return (default: 20)
  */
 export async function searchMedicines(query: string, limit: number = 20) {
-  return supabase.rpc('search_medicines', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (supabase as any).rpc('search_medicines', {
     search_query: query,
     result_limit: limit,
   });
@@ -272,7 +278,8 @@ export async function searchMedicines(query: string, limit: number = 20) {
  * @param pharmacyId - The pharmacy ID to get stock for
  */
 export async function getPharmacyStock(pharmacyId: string) {
-  return supabase.rpc('get_pharmacy_stock', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (supabase as any).rpc('get_pharmacy_stock', {
     p_pharmacy_id: pharmacyId,
   });
 }

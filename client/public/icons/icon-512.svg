@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="86" fill="#0F766E"/>
+  
+  <!-- Curio cross/plus logo centered in white -->
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="M256 64H448V170.667V277.333H256V469.333H64V277.333V170.667H256V64Z"
+    fill="white"
+  />
+</svg>

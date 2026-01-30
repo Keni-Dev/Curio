@@ -54,7 +54,8 @@ async function searchMedicines(
   query: string,
   limit: number
 ): Promise<MedicineSearchResult[]> {
-  const { data, error } = await supabase.rpc('search_medicines', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc('search_medicines', {
     search_query: query,
     result_limit: limit,
   });

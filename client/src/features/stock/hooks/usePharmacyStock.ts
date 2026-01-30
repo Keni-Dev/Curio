@@ -104,7 +104,8 @@ function calculateSummary(
 
 async function fetchPharmacyStock(pharmacyId: string): Promise<MedicineStock[]> {
   // Use RPC function that joins inventory reports with medicines
-  const { data, error } = await supabase.rpc('get_pharmacy_stock', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc('get_pharmacy_stock', {
     p_pharmacy_id: pharmacyId,
   });
 

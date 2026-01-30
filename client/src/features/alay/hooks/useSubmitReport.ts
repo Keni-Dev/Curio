@@ -62,7 +62,8 @@ async function submitStockReport(input: SubmitReportInput): Promise<SubmitReport
   };
 
   // Insert the report
-  const { data: report, error: insertError } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: report, error: insertError } = await (supabase as any)
     .from('inventory_reports')
     .insert(reportPayload)
     .select('id')
@@ -77,7 +78,8 @@ async function submitStockReport(input: SubmitReportInput): Promise<SubmitReport
   }
 
   // Get user profile to calculate bonuses
-  const { data: profile } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile } = await (supabase as any)
     .from('profiles')
     .select('alay_points, streak_days, last_contribution_at')
     .eq('id', user.id)
@@ -112,7 +114,8 @@ async function submitStockReport(input: SubmitReportInput): Promise<SubmitReport
   const totalPoints = basePoints + bonusPoints;
 
   // Update user profile (trigger will also update, but we do it for immediate feedback)
-  const { data: updatedProfile } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: updatedProfile } = await (supabase as any)
     .from('profiles')
     .update({
       alay_points: (profile?.alay_points || 0) + totalPoints,

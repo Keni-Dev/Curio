@@ -6,6 +6,25 @@
 @tailwind utilities;
 
 /* =============================================================================
+   CSS Custom Properties for Accessibility
+   ============================================================================= */
+:root {
+  /* Font scale for large text mode (1.25 = 25% larger) */
+  --font-scale: 1;
+  
+  /* High contrast text colors - overridden when .high-contrast is active */
+  --hc-text-primary: #0E1B1A;
+  --hc-text-secondary: #374151; /* Darker than default for AA compliance */
+  --hc-text-muted: #0F766E; /* Use primary instead of light teal */
+}
+
+.dark:root {
+  --hc-text-primary: #FFFFFF;
+  --hc-text-secondary: #E5E7EB;
+  --hc-text-muted: #5EEAD4;
+}
+
+/* =============================================================================
    Base Styles - from DESIGN_SYSTEM.md
    ============================================================================= */
 html {
@@ -185,6 +204,177 @@ a {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Manual Reduce Motion Class - for user preference override */
+.reduce-motion,
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* =============================================================================
+   High Contrast Mode - WCAG 2.1 AA Compliance (4.5:1 minimum)
+   ============================================================================= */
+
+/* High contrast class improves text readability */
+.high-contrast {
+  /* Override secondary/muted text to meet 4.5:1 contrast ratio */
+  --text-secondary: #374151 !important; /* Gray-700 */
+  --text-muted: #0F766E !important; /* Primary teal */
+}
+
+/* Override Tailwind text classes */
+.high-contrast .text-text-secondary,
+.high-contrast .text-slate-500,
+.high-contrast .text-slate-400,
+.high-contrast .text-gray-500 {
+  color: #374151 !important;
+}
+
+.high-contrast .text-text-muted,
+.high-contrast .text-slate-400,
+.high-contrast .text-gray-400 {
+  color: #0F766E !important;
+}
+
+/* Dark mode high contrast */
+.dark.high-contrast .text-text-secondary,
+.dark.high-contrast .text-slate-400,
+.dark.high-contrast .text-gray-400 {
+  color: #E5E7EB !important; /* Gray-200 */
+}
+
+.dark.high-contrast .text-text-muted {
+  color: #5EEAD4 !important; /* Teal-300 */
+}
+
+/* Ensure amber/warning text meets AA contrast */
+.high-contrast .text-amber-500,
+.high-contrast .text-warning {
+  color: #B45309 !important; /* Amber-700 for 4.5:1 on white */
+}
+
+.dark.high-contrast .text-amber-500,
+.dark.high-contrast .text-warning {
+  color: #FCD34D !important; /* Amber-300 for dark mode */
+}
+
+/* Increase border contrast */
+.high-contrast .border-slate-100,
+.high-contrast .border-slate-200 {
+  border-color: #94A3B8 !important; /* Slate-400 */
+}
+
+/* Stronger shadows for depth perception */
+.high-contrast .shadow-card,
+.high-contrast .shadow-soft {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* =============================================================================
+   Large Text Mode - 25% Font Scale
+   ============================================================================= */
+
+/* 
+ * Scale the root font-size so all rem-based values scale proportionally.
+ * Tailwind uses rem for most sizing, so this affects the entire app.
+ */
+html {
+  font-size: calc(16px * var(--font-scale, 1));
+}
+
+/* Ensure body inherits and applies scaling */
+body {
+  font-size: 1rem; /* Will be 16px or 20px based on --font-scale */
+}
+
+/* =============================================================================
+   Skip Link - Screen Reader Navigation
+   ============================================================================= */
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  z-index: 9999;
+  padding: 8px 16px;
+  background-color: #0F766E;
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid #13ECDA;
+  outline-offset: 2px;
+}
+
+/* =============================================================================
+   Screen Reader Only (sr-only) - Visually hidden but accessible
+   ============================================================================= */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Not sr-only when focused (for skip links) */
+.sr-only-focusable:focus,
+.sr-only-focusable:active {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* =============================================================================
+   Focus Styles - Enhanced for Accessibility
+   ============================================================================= */
+
+/* Stronger focus ring for high contrast mode */
+.high-contrast button:focus-visible,
+.high-contrast a:focus-visible,
+.high-contrast input:focus-visible,
+.high-contrast textarea:focus-visible,
+.high-contrast select:focus-visible,
+.high-contrast [tabindex]:focus-visible {
+  outline: 3px solid #0F766E !important;
+  outline-offset: 3px !important;
+}
+
+/* =============================================================================
+   ARIA Live Region - for screen reader announcements
+   ============================================================================= */
+
+#curio-live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* =============================================================================

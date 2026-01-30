@@ -115,9 +115,9 @@ const OcrScannerPage: FC = () => {
       .filter(Boolean)
       .join(', ');
     
-    // Set search query and navigate to home/search
+    // Set search query and navigate to medicine search page
     setQuery(searchTerms);
-    navigate('/?search=' + encodeURIComponent(searchTerms));
+    navigate('/search?q=' + encodeURIComponent(searchTerms));
   }, [setQuery, navigate]);
 
   return (

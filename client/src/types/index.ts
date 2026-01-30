@@ -3,7 +3,8 @@ export * from './pharmacy';
 export * from './medicine';
 export * from './user';
 export * from './common';
-// Re-export database types but exclude MedicineSearchResult which is defined in medicine.ts
+
+// Re-export database types
 export type {
   Database,
   Json,
@@ -24,9 +25,19 @@ export type {
   ProfileRow,
   ProfileInsert,
   ProfileUpdate,
+  HelpfulVoteRow,
+  HelpfulVoteInsert,
+  HelpfulVoteUpdate,
+  PharmacyType,
   PharmacyTypeEnum,
+  MedicineForm,
   MedicineFormEnum,
+  MedicineCategory,
   MedicineCategoryEnum,
+  StockStatus,
   StockStatusEnum,
+  UserLevel,
   UserLevelEnum,
+  NearbyPharmacyResult,
+  PharmacyStockResult,
 } from './database';

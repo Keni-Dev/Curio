@@ -3,6 +3,12 @@ import { Routes, Route } from 'react-router-dom'
 import { cn } from '~lib/utils'
 import { Spinner } from '~components/ui'
 import { PointsAnimationProvider, AchievementToastProvider } from '~features/alay'
+import { OfflineBanner, OfflineBannerSpacer } from '~components/ui/OfflineBanner'
+import { InstallPromptBanner } from '~components/ui/InstallPromptBanner'
+import { useInitialCache } from '~hooks/useInitialCache'
+import { useGeolocation } from '~hooks/useGeolocation'
+import { AccessibilityProvider } from '@/contexts/AccessibilityContext'
+import { useTranslation } from '@/lib/i18n'
 
 // Lazy load pages for bundle optimization
 const HomePage = lazy(() => import('~pages/HomePage'))
@@ -10,6 +16,8 @@ const DesignSystemDemo = lazy(() => import('~pages/DesignSystemDemo'))
 const PharmacyPage = lazy(() => import('~pages/PharmacyPage'))
 const ProfilePage = lazy(() => import('~pages/ProfilePage'))
 const OcrScannerPage = lazy(() => import('~pages/OcrScannerPage'))
+const ChatPage = lazy(() => import('~pages/ChatPage'))
+const SearchResultsPage = lazy(() => import('~pages/SearchResultsPage'))
 
 // Loading fallback for lazy components
 const PageLoader = () => (
@@ -66,34 +74,79 @@ function NotFoundPage() {
   )
 }
 
-function App() {
+// Skip Link component for keyboard navigation
+function SkipLink() {
+  const { t } = useTranslation()
+
+  return (
+    <a href="#main-content" className="skip-link">
+      {t('nav.skipToMain')}
+    </a>
+  )
+}
+
+function AppContent() {
+  // Get user location for caching nearby pharmacies
+  const { coordinates } = useGeolocation()
+
+  // Pre-cache data for offline use
+  useInitialCache({
+    latitude: coordinates?.lat,
+    longitude: coordinates?.lng,
+    enabled: true,
+  })
+
   return (
     <>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          {/* Main Map View */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/map" element={<HomePage />} />
+      {/* Skip Link for keyboard/screen reader users */}
+      <SkipLink />
 
-          {/* Design System Demo */}
-          <Route path="/design-system" element={<DesignSystemDemo />} />
+      {/* Offline Status Banner */}
+      <OfflineBanner />
+      <OfflineBannerSpacer />
 
-          {/* Placeholder routes - will be implemented */}
-          <Route path="/search" element={<PlaceholderPage title="Medicine Search" />} />
-          <Route path="/pharmacy/:slug" element={<PharmacyPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/contribute" element={<PlaceholderPage title="Contribute" />} />
-          <Route path="/scanner" element={<OcrScannerPage />} />
+      {/* Main Content */}
+      <main id="main-content" tabIndex={-1}>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Main Map View */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/map" element={<HomePage />} />
 
-          {/* 404 */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Suspense>
+            {/* Design System Demo */}
+            <Route path="/design-system" element={<DesignSystemDemo />} />
+
+            {/* Medicine Search Results */}
+            <Route path="/search" element={<SearchResultsPage />} />
+
+            {/* Pharmacy Detail */}
+            <Route path="/pharmacy/:slug" element={<PharmacyPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/contribute" element={<PlaceholderPage title="Contribute" />} />
+            <Route path="/scanner" element={<OcrScannerPage />} />
+            <Route path="/chat" element={<ChatPage />} />
+
+            {/* 404 */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </main>
 
       {/* Global Gamification Providers */}
       <PointsAnimationProvider />
       <AchievementToastProvider />
+
+      {/* PWA Install Prompt */}
+      <InstallPromptBanner />
     </>
+  )
+}
+
+function App() {
+  return (
+    <AccessibilityProvider>
+      <AppContent />
+    </AccessibilityProvider>
   )
 }
 

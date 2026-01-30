@@ -13,3 +13,6 @@ export type { ToastProps, ToastVariant, ToastContainerProps } from './Toast';
 // Re-export useToast from hooks for convenience
 export { useToast } from '@/hooks/useToast';
 export type { UseToastReturn } from '@/hooks/useToast';
+
+// Accessibility
+export { AccessibilityMenu, AccessibilityButton } from '../AccessibilityMenu';

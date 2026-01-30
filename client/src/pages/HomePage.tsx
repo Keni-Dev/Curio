@@ -10,12 +10,14 @@
  */
 
 import React, { lazy, Suspense, useState, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '~lib/utils';
+import { MAP_CONFIG } from '~lib/constants';
 import { useMapStore } from '~stores/useMapStore';
 import { useSearchStore } from '~stores/useSearchStore';
 import { useNearbyPharmacies, PharmacyCard as PharmacyCardNew, SelectedPharmacySheet } from '~features/pharmacy';
-import { Spinner } from '~components/ui';
+import { ChatModal } from '~features/medi-bot';
+import { Spinner, BottomSheet, AccessibilityMenu } from '~components/ui';
 import { SearchBar } from '~components/search';
 import NavHeader from '~components/layout/NavHeader';
 import type { PharmacyWithStock, StockStatus } from '~types/pharmacy';
@@ -93,6 +95,9 @@ const MapLoadingFallback: React.FC = () => (
 // =============================================================================
 
 const HomePage: React.FC = () => {
+  // Navigation
+  const navigate = useNavigate();
+
   // Search state from store (for selected medicine)
   const selectedMedicine = useSearchStore((s) => s.selectedMedicine);
   const selectMedicine = useSearchStore((s) => s.selectMedicine);
@@ -100,9 +105,14 @@ const HomePage: React.FC = () => {
   // Local search query for pharmacy name filtering
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Chat modal state
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Accessibility settings modal state
+  const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
+
   // Store
   const {
-    center,
     stockFilters,
     toggleStockFilter,
     selectedPharmacyId,
@@ -110,9 +120,13 @@ const HomePage: React.FC = () => {
     maxDistance,
   } = useMapStore();
 
-  // Fetch nearby pharmacies
+  // Use a stable query center to prevent data refresh on map pan/zoom (MVP simplification)
+  // This uses the default center for the pharmacy query - map can still pan freely
+  const stableQueryCenter = useMemo(() => MAP_CONFIG.DEFAULT_CENTER, []);
+
+  // Fetch nearby pharmacies with stable center (doesn't refetch on map movement)
   const { pharmacies, isLoading, isError, refetch } = useNearbyPharmacies({
-    center,
+    center: stableQueryCenter,
     radiusMeters: maxDistance,
   });
 
@@ -179,8 +193,12 @@ const HomePage: React.FC = () => {
             <SearchBar
               onSelect={(medicine: MedicineSearchResult) => {
                 selectMedicine(medicine);
-                // Update search query to filter pharmacies by medicine
-                setSearchQuery(medicine.brand_name || medicine.generic_name);
+                // Navigate to search results page with the selected medicine
+                navigate(`/search?medicineId=${medicine.id}`);
+              }}
+              onSearch={(query: string) => {
+                // Navigate to search results page with query text
+                navigate(`/search?q=${encodeURIComponent(query)}`);
               }}
               placeholder="Maghanap ng gamot..."
             />
@@ -376,7 +394,12 @@ const HomePage: React.FC = () => {
             <SearchBar
               onSelect={(medicine: MedicineSearchResult) => {
                 selectMedicine(medicine);
-                setSearchQuery(medicine.brand_name || medicine.generic_name);
+                // Navigate to search results page with the selected medicine
+                navigate(`/search?medicineId=${medicine.id}`);
+              }}
+              onSearch={(query: string) => {
+                // Navigate to search results page with query text
+                navigate(`/search?q=${encodeURIComponent(query)}`);
               }}
               placeholder="Maghanap ng gamot..."
             />
@@ -457,6 +480,61 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Floating Chat Button - Medi-Bot */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className={cn(
+          'fixed bottom-24 right-4 z-50',
+          'w-14 h-14 rounded-full',
+          'flex items-center justify-center',
+          'bg-primary text-white',
+          'shadow-lg shadow-primary/30',
+          'transition-all duration-200',
+          'hover:bg-primary-hover hover:shadow-xl hover:shadow-primary/40',
+          'hover:scale-105',
+          'active:scale-95'
+        )}
+        aria-label="Open Medi-Bot chat"
+      >
+        <span className="material-symbols-outlined text-2xl" aria-hidden="true">
+          smart_toy
+        </span>
+      </button>
+
+      {/* Floating Accessibility Button - Large and easy to tap for seniors */}
+      <button
+        onClick={() => setIsAccessibilityOpen(true)}
+        className={cn(
+          'fixed bottom-40 right-4 z-50',
+          'w-14 h-14 rounded-full',
+          'flex items-center justify-center',
+          'bg-white text-primary',
+          'shadow-lg border-2 border-primary/20',
+          'transition-all duration-200',
+          'hover:bg-primary hover:text-white hover:shadow-xl',
+          'hover:scale-105',
+          'active:scale-95'
+        )}
+        aria-label="Open accessibility settings"
+      >
+        <span className="material-symbols-outlined text-2xl" aria-hidden="true">
+          accessibility_new
+        </span>
+      </button>
+
+      {/* Accessibility Settings Bottom Sheet */}
+      <BottomSheet
+        isOpen={isAccessibilityOpen}
+        onClose={() => setIsAccessibilityOpen(false)}
+        title="Accessibility"
+        defaultSnap="half"
+      >
+        <AccessibilityMenu hideHeader className="bg-transparent" />
+      </BottomSheet>
+
+      {/* Medi-Bot Chat Modal */}
+      <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
 
       {/* Selected Pharmacy Bottom Sheet */}
       <SelectedPharmacySheet />

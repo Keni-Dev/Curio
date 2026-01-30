@@ -188,14 +188,14 @@ async function moderateReport(action: ModerationAction): Promise<ModerationResul
   const newStatus = statusMap[action.action] || 'pending';
 
   // Update moderation record
-  const { error: updateError } = await supabase
-    .from('report_moderation' as any)
+  const { error: updateError } = await (supabase as any)
+    .from('report_moderation')
     .update({
       status: newStatus,
       moderator_id: user.id,
       action_taken: action.reason || action.action,
       moderated_at: new Date().toISOString(),
-    } as any)
+    })
     .eq('report_id', action.reportId);
 
   if (updateError) {
@@ -205,14 +205,14 @@ async function moderateReport(action: ModerationAction): Promise<ModerationResul
   // If rejecting, optionally adjust trust score
   if (action.action === 'reject' && action.adjustTrustScore) {
     // Get the reporter ID
-    const { data: report } = await supabase
+    const { data: report } = await (supabase as any)
       .from('inventory_reports')
       .select('reported_by')
       .eq('id', action.reportId)
       .single();
 
     if (report?.reported_by) {
-      await supabase.rpc('update_user_trust_score' as any, {
+      await (supabase as any).rpc('update_user_trust_score', {
         p_user_id: report.reported_by,
         p_report_id: action.reportId,
         p_is_accurate: false,
@@ -221,13 +221,13 @@ async function moderateReport(action: ModerationAction): Promise<ModerationResul
   }
 
   // Resolve related abuse flags
-  const { error: flagError } = await supabase
-    .from('abuse_flags' as any)
+  const { error: flagError } = await (supabase as any)
+    .from('abuse_flags')
     .update({
       resolved_at: new Date().toISOString(),
       resolved_by: user.id,
       resolution_notes: `Moderation action: ${action.action}`,
-    } as any)
+    })
     .eq('report_id', action.reportId)
     .is('resolved_at', null);
 
@@ -300,7 +300,7 @@ export function useIsAdmin() {
       
       if (!user) return false;
 
-      const { data: profile } = await supabase
+      const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('level')
         .eq('id', user.id)

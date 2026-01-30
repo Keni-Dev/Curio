@@ -20,7 +20,41 @@ import {
 /** OpenRouter API configuration */
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || '';
-const OPENROUTER_MODEL = 'qwen/qwen-2-vl-7b-instruct:free'; // Free Qwen vision model
+
+/** 
+ * Free vision models with fallback order (all support image input)
+ * Verified from OpenRouter API: curl -s "https://openrouter.ai/api/v1/models" | jq for image modality
+ */
+const VISION_MODELS = [
+  'google/gemma-3-27b-it:free',                  // Primary - Google Gemma 3 27B (best quality)
+  'mistralai/mistral-small-3.1-24b-instruct:free', // Fallback 1 - Mistral Small 3.1
+  'nvidia/nemotron-nano-12b-v2-vl:free',         // Fallback 2 - NVIDIA Nemotron VL
+  'qwen/qwen-2.5-vl-7b-instruct:free',           // Fallback 3 - Qwen 2.5 VL
+  'google/gemma-3-12b-it:free',                  // Fallback 4 - Google Gemma 3 12B
+  'allenai/molmo-2-8b:free',                     // Fallback 5 - AllenAI Molmo2
+] as const;
+
+/** 
+ * Free text models for Stage 2 medicine parsing (no image support needed)
+ * Verified from OpenRouter API
+ */
+const TEXT_MODELS = [
+  'meta-llama/llama-3.3-70b-instruct:free',      // Primary - Llama 3.3 70B (best quality)
+  'qwen/qwen3-4b:free',                          // Fallback 1 - Qwen3 4B (fast)
+  'google/gemma-3-12b-it:free',                  // Fallback 2 - Gemma 3 12B
+  'mistralai/mistral-small-3.1-24b-instruct:free', // Fallback 3 - Mistral Small
+] as const;
+
+/** Track which models have failed recently to avoid repeated failures */
+const modelFailures: Map<string, { failedAt: number; count: number }> = new Map();
+
+/** Cooldown period for failed models (5 minutes) */
+const MODEL_COOLDOWN_MS = 5 * 60 * 1000;
+
+/** Rate limit tracking */
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL_MS = 2000; // 2 seconds between requests
+let rateLimitCooldownUntil = 0;
 
 /** OCR extraction prompt for prescription images */
 const OCR_SYSTEM_PROMPT = `You are an OCR specialist. Your ONLY job is to read the EXACT text written on this medical prescription image.
@@ -45,6 +79,45 @@ Examples:
 - If prescription is blank, return: {"medicines": [], "isPrescription": false, "confidence": 0.0}
 
 Extract what is ACTUALLY written, not what you think should be there.`;
+
+/** Stage 2: Medicine parsing prompt - separates medicine names from dosages/instructions */
+const MEDICINE_PARSING_PROMPT = `You are a medical prescription parser. Given raw OCR text from a prescription, extract and separate medicine names from their dosages and instructions.
+
+CRITICAL RULES:
+1. MEDICINE NAME should contain ONLY the drug/brand name (e.g., "Metformin", "Losartan", "Amlodipine")
+2. DOSAGE should contain strength AND frequency (e.g., "500mg twice daily", "50mg once daily")
+3. If dosage info is mixed with name, SEPARATE them properly
+4. If multiple medicines, extract ALL of them
+5. Ignore non-medicine text (doctor name, patient info, dates, etc.)
+6. Standardize common abbreviations:
+   - "od" or "OD" → "once daily"
+   - "bd" or "bid" → "twice daily"
+   - "tds" or "tid" → "three times daily"
+   - "qds" or "qid" → "four times daily"
+   - "prn" → "as needed"
+   - "iv" → "intravenous"
+   - "hs" → "at bedtime"
+
+Return ONLY valid JSON in this exact format:
+{
+  "medicines": [
+    {
+      "name": "Clean medicine name only",
+      "dosage": "Strength and frequency",
+      "instructions": "Additional instructions if any"
+    }
+  ]
+}
+
+Examples:
+Input: "Metformin 500mg 1 tab OD"
+Output: {"medicines": [{"name": "Metformin", "dosage": "500mg once daily", "instructions": "1 tablet"}]}
+
+Input: "Inj Remdesivir 100mg iv Day 1 followed by 100mg iv for 4 days"
+Output: {"medicines": [{"name": "Remdesivir", "dosage": "100mg intravenous", "instructions": "Day 1: 100mg, then 100mg daily for 4 days"}]}
+
+Input: "Losartan 50mg\nAmlodipine 5mg"
+Output: {"medicines": [{"name": "Losartan", "dosage": "50mg", "instructions": null}, {"name": "Amlodipine", "dosage": "5mg", "instructions": null}]}`;
 
 /** 
  * Verified medicine database - Common generics, brands, and Philippine medicines
@@ -296,126 +369,412 @@ function parseMedicinesFromText(rawText: string, baseConfidence: number): Extrac
 }
 
 /**
+ * Get available models (excluding those in cooldown)
+ */
+function getAvailableModels(): string[] {
+  const now = Date.now();
+  return VISION_MODELS.filter(model => {
+    const failure = modelFailures.get(model);
+    if (!failure) return true;
+    // Allow model after cooldown period
+    if (now - failure.failedAt > MODEL_COOLDOWN_MS) {
+      modelFailures.delete(model);
+      return true;
+    }
+    return false;
+  });
+}
+
+/**
+ * Mark a model as failed
+ */
+function markModelFailed(model: string): void {
+  const existing = modelFailures.get(model);
+  modelFailures.set(model, {
+    failedAt: Date.now(),
+    count: (existing?.count ?? 0) + 1,
+  });
+  console.warn(`Model ${model} marked as failed (${modelFailures.get(model)?.count} failures)`);
+}
+
+/**
  * Call OpenRouter API with vision model for OCR
+ * Automatically rotates to fallback models on failure
  */
 async function callOpenRouterAPI(imageDataUrl: string, retries = 2): Promise<OCRServiceResponse> {
   if (!OPENROUTER_API_KEY) {
     throw new Error('OpenRouter API key not configured. Set VITE_OPENROUTER_API_KEY in .env');
   }
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const response = await fetch(OPENROUTER_API_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Curio Prescription Scanner',
-        },
-        body: JSON.stringify({
-          model: OPENROUTER_MODEL,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: OCR_SYSTEM_PROMPT,
-                },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: imageDataUrl,
-                  },
-                },
-              ],
-            },
-          ],
-          temperature: 0.1, // Low temperature for consistent extraction
-          max_tokens: 1024,
-        }),
-      });
+  // Check rate limit cooldown
+  const now = Date.now();
+  if (rateLimitCooldownUntil > now) {
+    const waitSeconds = Math.ceil((rateLimitCooldownUntil - now) / 1000);
+    throw new Error(`Rate limited. Please wait ${waitSeconds} seconds before trying again.`);
+  }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('OpenRouter API Error:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText.substring(0, 500), // Log first 500 chars
-        });
+  // Enforce minimum request interval
+  const timeSinceLastRequest = now - lastRequestTime;
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL_MS) {
+    await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL_MS - timeSinceLastRequest));
+  }
+  lastRequestTime = Date.now();
+
+  const availableModels = getAvailableModels();
+  if (availableModels.length === 0) {
+    throw new Error('All vision models are temporarily unavailable. Please try again in a few minutes.');
+  }
+
+  let lastError: Error | null = null;
+
+  // Try each available model
+  for (const model of availableModels) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        console.log(`Trying model: ${model} (attempt ${attempt + 1})`);
         
-        // Retry on rate limit or server errors
-        if ((response.status === 429 || response.status >= 500) && attempt < retries) {
-          console.warn(`OpenRouter API error (attempt ${attempt + 1}), retrying...`);
+        const response = await fetch(OPENROUTER_API_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'Curio Prescription Scanner',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: OCR_SYSTEM_PROMPT,
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: imageDataUrl,
+                    },
+                  },
+                ],
+              },
+            ],
+            temperature: 0.1, // Low temperature for consistent extraction
+            max_tokens: 1024,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('OpenRouter API Error:', {
+            model,
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText.substring(0, 500),
+          });
+
+          // Handle 404 - model not found/unavailable, try next model immediately
+          if (response.status === 404) {
+            console.warn(`Model ${model} not found (404), trying next model...`);
+            markModelFailed(model);
+            break; // Exit retry loop, try next model
+          }
+
+          // Handle rate limiting
+          if (response.status === 429) {
+            console.warn(`Rate limited on ${model}`);
+            // Set cooldown for 30 seconds on rate limit
+            rateLimitCooldownUntil = Date.now() + 30000;
+            if (attempt < retries) {
+              await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
+              continue;
+            }
+            markModelFailed(model);
+            break; // Try next model
+          }
+
+          // Retry on server errors (5xx)
+          if (response.status >= 500 && attempt < retries) {
+            console.warn(`Server error on ${model} (attempt ${attempt + 1}), retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+            continue;
+          }
+
+          // Other errors - don't retry, try next model
+          lastError = new Error(`API error: ${response.status} - ${errorText.substring(0, 200)}`);
+          markModelFailed(model);
+          break;
+        }
+
+        // Success! Parse the response
+        const data = await response.json();
+        console.log('OpenRouter response:', { model, data });
+
+        const content = data.choices?.[0]?.message?.content;
+
+        if (!content) {
+          lastError = new Error('No content in OpenRouter response');
+          if (attempt < retries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          break;
+        }
+
+        // Parse JSON from LLM response (handle markdown code blocks)
+        let jsonStr = content.trim();
+
+        // Remove markdown code blocks if present
+        if (jsonStr.startsWith('```json')) {
+          jsonStr = jsonStr.slice(7);
+        } else if (jsonStr.startsWith('```')) {
+          jsonStr = jsonStr.slice(3);
+        }
+        if (jsonStr.endsWith('```')) {
+          jsonStr = jsonStr.slice(0, -3);
+        }
+        jsonStr = jsonStr.trim();
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+
+          // Convert LLM response to OCRServiceResponse format
+          const medicines = Array.isArray(parsed.medicines) ? parsed.medicines : [];
+          const extractedText = medicines.join('\n');
+
+          console.log(`OCR successful with model: ${model}`);
+          return {
+            extractedText,
+            predictedLabel: parsed.isPrescription ? 'medical prescription' : 'not medical prescription',
+            confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.7,
+          };
+        } catch (parseError) {
+          console.error('Failed to parse LLM response:', parseError, 'Raw:', jsonStr);
+          lastError = new Error('Failed to parse prescription data from AI response');
+          if (attempt < retries) {
+            continue;
+          }
+          // Try next model
+          break;
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        if (attempt < retries) {
+          console.warn(`Attempt ${attempt + 1} failed for ${model}, retrying...`, error);
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
           continue;
         }
-        
-        throw new Error(`OpenRouter API error: ${response.status} - ${errorText.substring(0, 200)}`);
+        // All retries exhausted for this model, try next
+        console.warn(`All retries exhausted for ${model}`);
+        break;
       }
-
-      const data = await response.json();
-      console.log('OpenRouter response:', data); // Debug log
-      
-      const content = data.choices?.[0]?.message?.content;
-
-      if (!content) {
-        throw new Error('No content in OpenRouter response');
-      }
-
-      // Parse JSON from LLM response (handle markdown code blocks)
-      let jsonStr = content.trim();
-      
-      // Remove markdown code blocks if present
-      if (jsonStr.startsWith('```json')) {
-        jsonStr = jsonStr.slice(7);
-      } else if (jsonStr.startsWith('```')) {
-        jsonStr = jsonStr.slice(3);
-      }
-      if (jsonStr.endsWith('```')) {
-        jsonStr = jsonStr.slice(0, -3);
-      }
-      jsonStr = jsonStr.trim();
-
-      const parsed = JSON.parse(jsonStr);
-      
-      // Convert LLM response to OCRServiceResponse format
-      const medicines = Array.isArray(parsed.medicines) ? parsed.medicines : [];
-      const extractedText = medicines.join('\n');
-      
-      return {
-        extractedText,
-        predictedLabel: parsed.isPrescription ? 'medical prescription' : 'not medical prescription',
-        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.7,
-      };
-    } catch (error) {
-      if (attempt === retries) {
-        throw error;
-      }
-      console.warn(`OpenRouter API attempt ${attempt + 1} failed, retrying...`, error);
-      await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
     }
   }
 
-  throw new Error('OpenRouter API failed after retries');
+  // All models failed
+  throw lastError ?? new Error('All vision models failed. Please try again later.');
+}
+
+/** Type for Stage 2 parsed medicine */
+interface ParsedMedicine {
+  name: string;
+  dosage: string | null;
+  instructions: string | null;
 }
 
 /**
- * Process an image through the OCR service
+ * Stage 2: Call text model to parse and separate medicine names from dosages
+ * This provides much more accurate extraction than regex-based parsing
+ */
+async function parseMedicinesWithAI(rawText: string, retries = 1): Promise<ParsedMedicine[]> {
+  // Skip if no text to parse
+  if (!rawText || rawText.trim().length < 3) {
+    console.warn('Stage 2: No text to parse');
+    return [];
+  }
+
+  // Enforce minimum request interval
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL_MS) {
+    await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL_MS - timeSinceLastRequest));
+  }
+  lastRequestTime = Date.now();
+
+  // Get available text models (use same failure tracking)
+  const availableModels = TEXT_MODELS.filter(model => {
+    const failure = modelFailures.get(model);
+    if (!failure) return true;
+    if (Date.now() - failure.failedAt > MODEL_COOLDOWN_MS) {
+      modelFailures.delete(model);
+      return true;
+    }
+    return false;
+  });
+
+  if (availableModels.length === 0) {
+    console.warn('Stage 2: No text models available, falling back to regex parsing');
+    return [];
+  }
+
+  let lastError: Error | null = null;
+
+  for (const model of availableModels) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        console.log(`Stage 2: Trying text model ${model} (attempt ${attempt + 1})`);
+
+        const response = await fetch(OPENROUTER_API_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'Curio Medicine Parser',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              {
+                role: 'system',
+                content: MEDICINE_PARSING_PROMPT,
+              },
+              {
+                role: 'user',
+                content: `Parse this prescription text and extract medicines with their dosages:\n\n${rawText}`,
+              },
+            ],
+            temperature: 0.1,
+            max_tokens: 512,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Stage 2 API Error:', { model, status: response.status, body: errorText.substring(0, 300) });
+
+          if (response.status === 404) {
+            markModelFailed(model);
+            break;
+          }
+          if (response.status === 429) {
+            rateLimitCooldownUntil = Date.now() + 30000;
+            markModelFailed(model);
+            break;
+          }
+          if (response.status >= 500 && attempt < retries) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+            continue;
+          }
+
+          lastError = new Error(`Stage 2 API error: ${response.status}`);
+          markModelFailed(model);
+          break;
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+
+        if (!content) {
+          lastError = new Error('Stage 2: No content in response');
+          if (attempt < retries) continue;
+          break;
+        }
+
+        // Parse JSON response
+        let jsonStr = content.trim();
+        if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
+        else if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
+        if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
+        jsonStr = jsonStr.trim();
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const medicines: ParsedMedicine[] = Array.isArray(parsed.medicines)
+            ? parsed.medicines.map((m: { name?: string; dosage?: string; instructions?: string }) => ({
+                name: typeof m.name === 'string' ? m.name.trim() : '',
+                dosage: typeof m.dosage === 'string' ? m.dosage.trim() : null,
+                instructions: typeof m.instructions === 'string' ? m.instructions.trim() : null,
+              })).filter((m: ParsedMedicine) => m.name.length > 0)
+            : [];
+
+          console.log(`Stage 2 successful with ${model}:`, medicines);
+          return medicines;
+        } catch (parseError) {
+          console.error('Stage 2: Failed to parse response:', parseError, 'Raw:', jsonStr);
+          lastError = new Error('Stage 2: Failed to parse AI response');
+          if (attempt < retries) continue;
+          break;
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+          continue;
+        }
+        break;
+      }
+    }
+  }
+
+  console.warn('Stage 2: All text models failed, falling back to regex parsing', lastError);
+  return [];
+}
+
+/**
+ * Process an image through the OCR service (2-stage pipeline)
+ * Stage 1: Vision model extracts raw text from image
+ * Stage 2: Text model parses and separates medicine names from dosages
  */
 async function processImage(imageDataUrl: string): Promise<OCRResult> {
   const startTime = Date.now();
 
   try {
+    // Stage 1: Extract raw text from image using vision model
+    console.log('Stage 1: Extracting text from image...');
     const serviceResponse = await callOpenRouterAPI(imageDataUrl);
+    console.log('Stage 1 complete, raw text:', serviceResponse.extractedText);
+
+    // Stage 2: Parse medicines using text model for accurate separation
+    console.log('Stage 2: Parsing medicines with AI...');
+    const aiParsedMedicines = await parseMedicinesWithAI(serviceResponse.extractedText);
     
     const processingTimeMs = Date.now() - startTime;
-    
-    const medicines = parseMedicinesFromText(
-      serviceResponse.extractedText,
-      serviceResponse.confidence
-    );
+    let medicines: ExtractedMedicine[];
+
+    if (aiParsedMedicines.length > 0) {
+      // Use AI-parsed medicines (more accurate)
+      console.log('Using AI-parsed medicines:', aiParsedMedicines);
+      medicines = aiParsedMedicines.map(parsed => {
+        // Find best match in our verified database
+        const match = findBestMatch(parsed.name);
+        const confidence = serviceResponse.confidence * (match?.score ?? 0.7);
+        
+        // Combine dosage and instructions for display
+        const dosageDisplay = [parsed.dosage, parsed.instructions]
+          .filter(Boolean)
+          .join(' - ');
+
+        return {
+          id: generateExtractedMedicineId(),
+          rawText: `${parsed.name}${parsed.dosage ? ' ' + parsed.dosage : ''}`,
+          normalizedName: match?.name ?? parsed.name,
+          confidence,
+          confidenceLevel: getConfidenceLevel(confidence),
+          dosage: dosageDisplay || null,
+          isSelected: confidence >= 0.7,
+          isEdited: false,
+        };
+      });
+    } else {
+      // Fallback to regex-based parsing (Stage 2 failed or no text models available)
+      console.log('Falling back to regex parsing');
+      medicines = parseMedicinesFromText(
+        serviceResponse.extractedText,
+        serviceResponse.confidence
+      );
+    }
 
     return {
       rawText: serviceResponse.extractedText,
@@ -502,6 +861,24 @@ interface UseOCRExtractionReturn {
   removeMedicine: (id: string) => void;
   /** Get selected medicines */
   selectedMedicines: ExtractedMedicine[];
+  /** Rate limit status */
+  rateLimitStatus: { isLimited: boolean; secondsRemaining: number };
+  /** Check if rate limited before extraction */
+  checkRateLimit: () => { canProceed: boolean; waitSeconds: number };
+}
+
+/**
+ * Get current rate limit status
+ */
+function getRateLimitStatus(): { isLimited: boolean; secondsRemaining: number } {
+  const now = Date.now();
+  if (rateLimitCooldownUntil > now) {
+    return {
+      isLimited: true,
+      secondsRemaining: Math.ceil((rateLimitCooldownUntil - now) / 1000),
+    };
+  }
+  return { isLimited: false, secondsRemaining: 0 };
 }
 
 export function useOCRExtraction(): UseOCRExtractionReturn {
@@ -574,10 +951,29 @@ export function useOCRExtraction(): UseOCRExtractionReturn {
     imageDataUrl: string,
     callbacks?: { onSuccess?: () => void; onError?: () => void }
   ) => {
+    // Check rate limit before attempting
+    const rateCheck = getRateLimitStatus();
+    if (rateCheck.isLimited) {
+      const rateLimitError = new Error(
+        `Rate limited. Please wait ${rateCheck.secondsRemaining} seconds before scanning again.`
+      );
+      callbacks?.onError?.();
+      throw rateLimitError;
+    }
+
     mutation.mutate(imageDataUrl, {
       onSuccess: () => callbacks?.onSuccess?.(),
       onError: () => callbacks?.onError?.(),
     });
+  };
+
+  /** Check rate limit before extraction */
+  const checkRateLimit = (): { canProceed: boolean; waitSeconds: number } => {
+    const status = getRateLimitStatus();
+    return {
+      canProceed: !status.isLimited,
+      waitSeconds: status.secondsRemaining,
+    };
   };
 
   /** Get selected medicines */
@@ -594,6 +990,8 @@ export function useOCRExtraction(): UseOCRExtractionReturn {
     addManualMedicine,
     removeMedicine,
     selectedMedicines,
+    rateLimitStatus: getRateLimitStatus(),
+    checkRateLimit,
   };
 }
 

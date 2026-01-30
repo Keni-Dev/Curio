@@ -5,6 +5,8 @@
  * points, level, streak, contributions, and badges.
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { UserLevel, UserBadge } from '@/types/user';
@@ -83,7 +85,8 @@ async function fetchAlayProfile(): Promise<AlayProfile | null> {
   }
 
   // Fetch profile data
-  const { data: profile, error: profileError } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile, error: profileError } = await (supabase as any)
     .from('profiles')
     .select(
       `
@@ -103,14 +106,16 @@ async function fetchAlayProfile(): Promise<AlayProfile | null> {
   }
 
   // Fetch helpful votes count (reports that were verified/upvoted)
-  const { count: helpfulVotes } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { count: helpfulVotes } = await (supabase as any)
     .from('inventory_reports')
     .select('*', { count: 'exact', head: true })
     .eq('reported_by', user.id)
     .eq('status', 'in_stock');
 
   // Fetch user rank position
-  const { data: rankData } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: rankData } = await (supabase as any)
     .from('profiles')
     .select('id')
     .order('alay_points', { ascending: false });
@@ -119,7 +124,7 @@ async function fetchAlayProfile(): Promise<AlayProfile | null> {
   let rankPercentile: string | null = null;
 
   if (rankData) {
-    const position = rankData.findIndex((p) => p.id === user.id) + 1;
+    const position = rankData.findIndex((p: any) => p.id === user.id) + 1;
     if (position > 0) {
       rankPosition = position;
       rankPercentile = calculateRankPercentile(position, rankData.length);

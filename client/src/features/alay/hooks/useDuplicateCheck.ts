@@ -64,7 +64,7 @@ async function checkForDuplicate(
   // Call the database function using raw RPC
   // Note: The function may not exist until migration is run
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await supabase.rpc('check_duplicate_report' as any, {
+  const { data, error } = await (supabase as any).rpc('check_duplicate_report', {
     p_user_id: userId,
     p_pharmacy_id: pharmacyId,
     p_medicine_id: medicineId,

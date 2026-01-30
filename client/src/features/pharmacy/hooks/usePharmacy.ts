@@ -55,36 +55,40 @@ async function fetchPharmacyBySlug(slug: string): Promise<Pharmacy | null> {
   // or parse the PostGIS point. Let's use a simple approach:
   // Query the RPC function with the pharmacy's approximate location
   // For now, use a fixed Manila coordinate to find this specific pharmacy
-  const { data: nearbyData } = await supabase.rpc('find_nearby_pharmacies', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: nearbyData } = await (supabase as any).rpc('find_nearby_pharmacies', {
     user_lat: 14.8527,  // Approximate Malolos coordinates
     user_lng: 120.8156,
     radius_meters: 50000, // 50km radius to ensure we find it
   });
 
   // Find this pharmacy in the results
-  const pharmacyWithLocation = nearbyData?.find((p: { slug: string }) => p.slug === slug);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pharmacyWithLocation = nearbyData?.find((p: any) => p.slug === slug);
 
-  // Transform the row
+  // Transform the row - cast data to any to handle Supabase type generation issues
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const row = data as any;
   return {
-    id: data.id,
-    name: data.name,
-    slug: data.slug,
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
     location: {
       lat: pharmacyWithLocation?.lat ?? 14.8527,
       lng: pharmacyWithLocation?.lng ?? 120.8156,
     },
-    address: data.address,
-    city: data.city,
-    phone: data.phone ?? undefined,
-    type: data.type as PharmacyType,
-    chainName: data.chain_name ?? undefined,
-    operatingHours: data.operating_hours as OperatingHours | undefined,
-    is24Hours: data.is_24_hours,
-    isVerified: data.is_verified,
-    logoUrl: data.logo_url ?? undefined,
-    rating: data.rating ?? undefined,
-    totalReports: data.total_reports,
-    lastUpdated: data.updated_at,
+    address: row.address,
+    city: row.city,
+    phone: row.phone ?? undefined,
+    type: row.type as PharmacyType,
+    chainName: row.chain_name ?? undefined,
+    operatingHours: row.operating_hours as OperatingHours | undefined,
+    is24Hours: row.is_24_hours,
+    isVerified: row.is_verified,
+    logoUrl: row.logo_url ?? undefined,
+    rating: row.rating ?? undefined,
+    totalReports: row.total_reports,
+    lastUpdated: row.updated_at,
   };
 }
 

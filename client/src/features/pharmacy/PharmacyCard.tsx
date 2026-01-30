@@ -35,6 +35,37 @@ interface PharmacyCardProps {
 }
 
 // =============================================================================
+// HELPER: Generate accessible label for pharmacy card
+// =============================================================================
+
+function getAccessibleLabel(pharmacy: PharmacyWithStock, showDistance: boolean): string {
+  const parts: string[] = [pharmacy.name];
+  
+  if (pharmacy.isVerified) {
+    parts.push('verified pharmacy');
+  }
+  
+  if (showDistance && pharmacy.distance !== undefined) {
+    parts.push(`${formatDistance(pharmacy.distance)} away`);
+  }
+  
+  // Stock status
+  const stockLabels: Record<string, string> = {
+    in_stock: 'medicine in stock',
+    low_stock: 'low stock',
+    out_of_stock: 'out of stock',
+    unknown: 'stock status unknown',
+  };
+  parts.push(stockLabels[pharmacy.stockStatus] || 'stock status unknown');
+  
+  if (pharmacy.is24Hours) {
+    parts.push('open 24 hours');
+  }
+  
+  return parts.join(', ');
+}
+
+// =============================================================================
 // COMPONENT
 // =============================================================================
 
@@ -45,8 +76,11 @@ export function PharmacyCard({
   onClick,
   className,
 }: PharmacyCardProps) {
+  const accessibleLabel = getAccessibleLabel(pharmacy, showDistance);
+  
   const cardContent = (
-    <div
+    <article
+      aria-label={accessibleLabel}
       className={cn(
         // Glass morphism effect from DESIGN_SYSTEM.md
         'bg-white/90 dark:bg-surface-dark/80',
@@ -87,11 +121,12 @@ export function PharmacyCard({
               'flex items-center justify-center overflow-hidden',
               compact ? 'size-10' : 'size-12'
             )}
+            aria-hidden="true"
           >
             {pharmacy.logoUrl ? (
               <img
                 src={pharmacy.logoUrl}
-                alt={`${pharmacy.name} logo`}
+                alt=""
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -118,7 +153,7 @@ export function PharmacyCard({
                 <span
                   className="material-symbols-outlined text-blue-500 flex-shrink-0"
                   style={{ fontSize: compact ? '16px' : '18px' }}
-                  title="Verified Pharmacy"
+                  aria-hidden="true"
                 >
                   verified
                 </span>
@@ -173,13 +208,13 @@ export function PharmacyCard({
           <div className="flex items-center gap-2 flex-wrap">
             {pharmacy.is24Hours && (
               <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" aria-hidden="true" />
                 24/7
               </span>
             )}
             {pharmacy.type === 'Generics' && (
               <span className="text-xs text-accent bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded-full">
-                💰 Generics
+                <span aria-hidden="true">💰</span> Generics
               </span>
             )}
           </div>
@@ -190,6 +225,7 @@ export function PharmacyCard({
               <span
                 className="material-symbols-outlined"
                 style={{ fontSize: '14px' }}
+                aria-hidden="true"
               >
                 schedule
               </span>
@@ -201,13 +237,13 @@ export function PharmacyCard({
 
       {/* Arrow indicator for non-compact */}
       {!compact && !onClick && (
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true">
           <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
             chevron_right
           </span>
         </div>
       )}
-    </div>
+    </article>
   );
 
   // Wrap in Link if not compact and no custom onClick
@@ -216,6 +252,7 @@ export function PharmacyCard({
       <Link
         to={`/pharmacy/${pharmacy.slug}`}
         className="block relative focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-2xl"
+        aria-label={`View details for ${pharmacy.name}`}
       >
         {cardContent}
       </Link>

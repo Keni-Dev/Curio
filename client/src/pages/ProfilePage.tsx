@@ -16,7 +16,8 @@ import {
   ACHIEVEMENT_BADGES,
   useLeaderboard,
 } from '@/features/alay';
-import { Spinner } from '@/components/ui';
+import { Spinner, AccessibilityMenu } from '@/components/ui';
+import { CurioBrand } from '@/components/ui/CurioLogo';
 
 // =============================================================================
 // COMPONENT
@@ -111,17 +112,9 @@ export function ProfilePage() {
         <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto h-16 flex items-center justify-between gap-4">
           {/* Logo */}
           <a href="/" className="flex items-center gap-3 text-text-primary dark:text-white group">
-            <div className="size-8 text-primary group-hover:scale-110 transition-transform duration-300">
-              <svg className="w-full h-full" fill="none" viewBox="0 0 48 48">
-                <path
-                  clipRule="evenodd"
-                  d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z"
-                  fill="currentColor"
-                  fillRule="evenodd"
-                />
-              </svg>
+            <div className="group-hover:scale-110 transition-transform duration-300">
+              <CurioBrand logoSize={32} variant="primary" />
             </div>
-            <span className="text-xl font-bold tracking-tight">Curio</span>
           </a>
 
           {/* Navigation */}
@@ -197,6 +190,9 @@ export function ProfilePage() {
               helpfulVotes={displayProfile.helpfulVotes}
               rank={displayProfile.rankPercentile || undefined}
             />
+
+            {/* Accessibility Settings - Easy access for seniors */}
+            <AccessibilityMenu className="shadow-card" />
           </div>
 
           {/* Right Column: Achievements & Activity */}

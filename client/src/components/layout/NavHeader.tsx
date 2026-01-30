@@ -8,6 +8,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '~lib/utils';
+import { CurioBrand } from '~components/ui/CurioLogo';
 
 // =============================================================================
 // TYPES
@@ -54,13 +55,10 @@ const NavHeader: React.FC = () => {
           )}
         >
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 shrink-0">
-            <div className="size-8 rounded-lg bg-primary flex items-center justify-center text-white">
-              <span className="material-symbols-outlined text-[20px]">local_pharmacy</span>
+          <Link to="/" className="flex items-center gap-3 shrink-0 group">
+            <div className="group-hover:scale-110 transition-transform duration-300">
+              <CurioBrand logoSize={32} variant="primary" />
             </div>
-            <h1 className="text-primary text-xl font-bold tracking-tight">
-              Curio
-            </h1>
           </Link>
 
           {/* Desktop Nav Links */}
