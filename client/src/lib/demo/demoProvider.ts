@@ -19,7 +19,7 @@ import {
   type DemoProfile,
 } from './demoData';
 import { simulateNetworkDelay } from './demoConfig';
-import type { StockStatus } from '@/types/database';
+import type { StockStatus, MedicineSearchResult } from '@/types/database';
 
 // =============================================================================
 // PHARMACY FUNCTIONS
@@ -105,19 +105,6 @@ export async function demoGetPharmacyById(
 // =============================================================================
 // MEDICINE FUNCTIONS
 // =============================================================================
-
-export interface MedicineSearchResult {
-  id: string;
-  brand_name: string | null;
-  generic_name: string;
-  dosage: string | null;
-  form: string | null;
-  category: string | null;
-  tags: string[];
-  requires_prescription: boolean;
-  description: string | null;
-  rank?: number;
-}
 
 /**
  * Demo version of search_medicines RPC.
