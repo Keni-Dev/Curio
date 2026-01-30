@@ -25,19 +25,19 @@
 
 ---
 
-## 📖 About
+## About
 
 **Curio** is a real-time, community-powered Progressive Web App (PWA) that helps Filipino patients and caregivers locate scarce medicines in nearby pharmacies. Think of it as **"Waze for medicines"** — users can search for medications, view stock availability on an interactive map, and contribute stock reports to help others while earning **Alay Points** as rewards.
 
-Built for the **Codyssey: WebQuest Hackathon** at Bulacan State University 🎓
+Built for the **Codyssey: WebQuest Hackathon** at Bulacan State University 
 
-> 💡 **The Problem:** Millions of Filipinos waste hours visiting multiple pharmacies searching for medicines — especially maintenance medications, seasonal drugs, and rare specialty items. No existing platform aggregates real-time stock availability across ALL pharmacies.
+> **The Problem:** Millions of Filipinos waste hours visiting multiple pharmacies searching for medicines — especially maintenance medications, seasonal drugs, and rare specialty items. No existing platform aggregates real-time stock availability across ALL pharmacies.
 >
-> 💊 **Our Solution:** Curio uses community intelligence to crowdsource medicine availability data, making the search for medicines faster and less frustrating!
+> **Our Solution:** Curio uses community intelligence to crowdsource medicine availability data, making the search for medicines faster and less frustrating!
 
 ---
 
-## 👨‍💻 Developers
+## Developers
 
 | Name | 
 |------|
@@ -47,7 +47,7 @@ Built for the **Codyssey: WebQuest Hackathon** at Bulacan State University 🎓
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 | Technology | Purpose |
@@ -94,47 +94,47 @@ Built for the **Codyssey: WebQuest Hackathon** at Bulacan State University 🎓
 
 ---
 
-## ✨ Features
+## Features
 
-### 🗺️ Real-Time Medicine Map
+### Real-Time Medicine Map
 - Interactive map showing pharmacies with stock status markers (🟢 In Stock, 🟡 Low Stock, 🔴 Out of Stock)
 - Geolocation-based nearby pharmacy search
 - Real-time updates via Supabase subscriptions
 
-### 🔍 Smart Medicine Search
+### Smart Medicine Search
 - Search by brand name or generic name
 - Fuzzy matching for misspellings (e.g., "Biogisic" → "Biogesic")
 - Recent search history
 - Voice search support (Tagalog)
 
-### 🏪 Pharmacy Details
+### Pharmacy Details
 - Distance, operating hours, contact info
 - Community-verified stock status
 - One-tap call or navigation
 
-### ⭐ Alay Points System (Gamification)
+### Alay Points System (Gamification)
 - Earn points for contributing stock reports
 - Streak bonuses for daily contributions
 - Level progression: Baguhan → Scout → Champion → Legend
 - Redeemable rewards (simulated)
 
-### 🤖 Medi-Bot AI Assistant
+### Medi-Bot AI Assistant
 - Symptom-to-generic-name suggestions
 - Taglish (Tagalog + English) responses
 - Safe OTC recommendations only
 - Powered by OpenRouter (Llama/Gemma models)
 
-### 📷 Prescription OCR Scanner
+### Prescription OCR Scanner
 - Scan handwritten prescriptions
 - Extract medicine names automatically
 - Powered by NAVER Donut model (84% word accuracy)
 
-### 📱 Progressive Web App
+### Progressive Web App
 - Installable on mobile devices
 - Offline support with cached data
 - Push-ready architecture
 
-### ♿ Accessibility
+### Accessibility
 - Large text mode
 - Voice search
 - 44x44px minimum touch targets
@@ -142,7 +142,7 @@ Built for the **Codyssey: WebQuest Hackathon** at Bulacan State University 🎓
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -219,7 +219,7 @@ Built for the **Codyssey: WebQuest Hackathon** at Bulacan State University 🎓
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 curio/
@@ -262,7 +262,7 @@ curio/
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 
 ### Unit & Integration Tests
 ```bash
@@ -281,7 +281,7 @@ pnpm test:e2e:debug     # Debug mode
 
 ---
 
-## 🌐 API Overview
+## API Overview
 
 ### Search
 ```
@@ -308,7 +308,7 @@ POST /api/ai/medi-bot           # Chat
 
 ---
 
-## 🎯 MVP Scope
+## MVP Scope
 
 - **Location:** Malolos, Bulacan (near Bulacan State University)
 - **Pharmacies:** 50+ pre-seeded pharmacies
@@ -317,13 +317,13 @@ POST /api/ai/medi-bot           # Chat
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 > Coming soon! Visit our [live demo](https://curio-tau.vercel.app/) to see Curio in action.
 
 ---
 
-## 📄 License
+## License
 
 © 2026 Kenny Ivan Zamora, Lorenz Gabriel Velasco, Rodelyn Viray. All rights reserved.
 
