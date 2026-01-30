@@ -4,4 +4,6 @@ prompts/
 PROMPT.md
 agent.md
 DESIGN_PROTOTYPE.md
-.github/PROJECT_DESCRIPTION.md
+PROJECT_DESCRIPTION.md
+.agent/
+.github/

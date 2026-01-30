@@ -115,31 +115,64 @@ function transformPharmacy(row: NearbyPharmacyRow): PharmacyWithStock {
 // FETCH FUNCTION
 // =============================================================================
 
+// Timeout for fetch requests (15 seconds)
+const FETCH_TIMEOUT_MS = 15000;
+
+// Type for Supabase RPC response
+interface SupabaseRpcResponse<T> {
+  data: T | null;
+  error: { message: string } | null;
+}
+
+/**
+ * Wraps a promise with a timeout
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(errorMessage)), ms)
+    ),
+  ]);
+}
+
 async function fetchNearbyPharmacies(
   center: Coordinates,
   radiusMeters: number
 ): Promise<PharmacyWithStock[]> {
   console.log('[fetchNearbyPharmacies] Fetching pharmacies...', { center, radiusMeters });
   
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc('find_nearby_pharmacies', {
-    user_lat: center.lat,
-    user_lng: center.lng,
-    radius_meters: radiusMeters,
-  });
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rpcPromise = (supabase as any).rpc('find_nearby_pharmacies', {
+      user_lat: center.lat,
+      user_lng: center.lng,
+      radius_meters: radiusMeters,
+    }) as Promise<SupabaseRpcResponse<NearbyPharmacyRow[]>>;
 
-  if (error) {
-    console.error('[fetchNearbyPharmacies] Error:', error);
-    throw new Error(error.message);
+    const { data, error } = await withTimeout(
+      rpcPromise,
+      FETCH_TIMEOUT_MS,
+      'Request timed out. Please check your connection and try again.'
+    );
+
+    if (error) {
+      console.error('[fetchNearbyPharmacies] Supabase error:', error);
+      throw new Error(error.message || 'Failed to fetch pharmacies');
+    }
+
+    console.log('[fetchNearbyPharmacies] Got data:', data?.length ?? 0, 'pharmacies');
+
+    if (!data || !Array.isArray(data)) {
+      console.warn('[fetchNearbyPharmacies] No data returned or invalid format');
+      return [];
+    }
+
+    return (data as NearbyPharmacyRow[]).map(transformPharmacy);
+  } catch (err) {
+    console.error('[fetchNearbyPharmacies] Fetch failed:', err);
+    throw err;
   }
-
-  console.log('[fetchNearbyPharmacies] Got data:', data?.length ?? 0, 'pharmacies');
-
-  if (!data) {
-    return [];
-  }
-
-  return (data as NearbyPharmacyRow[]).map(transformPharmacy);
 }
 
 // =============================================================================
@@ -176,9 +209,11 @@ export function useNearbyPharmacies(
     retry: 2,
   });
 
+  // In TanStack Query v5, isPending replaces isLoading
+  // isPending = true when there's no cached data and the query is fetching
   return {
     pharmacies: query.data ?? [],
-    isLoading: query.isLoading,
+    isLoading: query.isPending,
     isError: query.isError,
     error: query.error,
     refetch: query.refetch,

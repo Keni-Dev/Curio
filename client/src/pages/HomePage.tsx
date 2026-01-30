@@ -330,7 +330,7 @@ const RecentSearchesSection: React.FC<RecentSearchesSectionProps> = ({
 
 const NearbyPharmaciesPreview: React.FC = () => {
   // Fetch nearby pharmacies with default center
-  const { pharmacies, isLoading, isError } = useNearbyPharmacies({
+  const { pharmacies, isLoading, isError, error, refetch, isFetching } = useNearbyPharmacies({
     center: MAP_CONFIG.DEFAULT_CENTER,
     radiusMeters: 5000, // 5km radius
   });
@@ -341,6 +341,11 @@ const NearbyPharmaciesPreview: React.FC = () => {
       .filter((p) => p.stockStatus === 'in_stock' || p.stockStatus === 'low_stock')
       .slice(0, 3);
   }, [pharmacies]);
+
+  // Handle retry
+  const handleRetry = () => {
+    refetch();
+  };
 
   return (
     <section className="mb-6">
@@ -357,7 +362,7 @@ const NearbyPharmaciesPreview: React.FC = () => {
         </Link>
       </div>
 
-      {isLoading ? (
+      {isLoading || isFetching ? (
         <div className="flex items-center justify-center py-8">
           <Spinner size="md" />
         </div>
@@ -366,7 +371,17 @@ const NearbyPharmaciesPreview: React.FC = () => {
           <span className="material-symbols-outlined text-3xl text-rose-400 mb-2 block">
             error
           </span>
-          <p className="text-sm text-slate-500">Hindi ma-load ang mga botika</p>
+          <p className="text-sm text-slate-500 mb-2">Hindi ma-load ang mga botika</p>
+          <p className="text-xs text-slate-400 mb-3">
+            {error?.message || 'May problema sa connection'}
+          </p>
+          <button
+            onClick={handleRetry}
+            className="text-xs font-medium text-primary hover:text-primary-dark transition-colors flex items-center gap-1 mx-auto"
+          >
+            <span className="material-symbols-outlined text-sm">refresh</span>
+            Subukan ulit
+          </button>
         </div>
       ) : previewPharmacies.length === 0 ? (
         <div className="text-center py-6">
