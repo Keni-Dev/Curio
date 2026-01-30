@@ -6,6 +6,7 @@
  * - User profile
  * - Auth loading states
  * - Auth initialization
+ * - Demo mode auto-login
  */
 
 import { create } from 'zustand';
@@ -14,6 +15,12 @@ import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import type { User, UserLevel } from '~types/user';
 import type { ProfileRow } from '~types/database';
 import { supabase } from '~lib/supabase';
+import { isDemoModeActive } from '~stores/useDevToolsStore';
+import {
+  DEMO_SUPABASE_USER,
+  DEMO_SESSION,
+  DEMO_APP_USER,
+} from '~lib/demo/demoAuth';
 import {
   signInWithEmail,
   signUpWithEmail,
@@ -92,6 +99,20 @@ export const useAuthStore = create<AuthState>()(
           return;
         }
 
+        // Check if demo mode is active - auto-login with demo user
+        if (isDemoModeActive()) {
+          console.log('[Auth] Demo mode active, using demo user');
+          set({
+            user: DEMO_SUPABASE_USER as unknown as SupabaseUser,
+            session: DEMO_SESSION as unknown as Session,
+            profile: DEMO_APP_USER,
+            isAuthenticated: true,
+            isLoading: false,
+            isInitialized: true,
+          });
+          return;
+        }
+
         try {
           // Set up auth state change listener FIRST (before getSession)
           // This ensures we don't miss any auth events
@@ -164,6 +185,19 @@ export const useAuthStore = create<AuthState>()(
        * Sign in with email/password
        */
       signIn: async (credentials) => {
+        // Demo mode: instant success with demo user
+        if (isDemoModeActive()) {
+          console.log('[Auth] Demo mode: sign in with demo user');
+          set({
+            user: DEMO_SUPABASE_USER as unknown as SupabaseUser,
+            session: DEMO_SESSION as unknown as Session,
+            profile: DEMO_APP_USER,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+          return { success: true };
+        }
+
         set({ isLoading: true });
         const result = await signInWithEmail(credentials);
         if (!result.success) {
@@ -176,6 +210,19 @@ export const useAuthStore = create<AuthState>()(
        * Sign up with email/password
        */
       signUp: async (credentials) => {
+        // Demo mode: instant success with demo user
+        if (isDemoModeActive()) {
+          console.log('[Auth] Demo mode: sign up with demo user');
+          set({
+            user: DEMO_SUPABASE_USER as unknown as SupabaseUser,
+            session: DEMO_SESSION as unknown as Session,
+            profile: DEMO_APP_USER,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+          return { success: true };
+        }
+
         set({ isLoading: true });
         const result = await signUpWithEmail(credentials);
         if (!result.success) {
@@ -188,6 +235,19 @@ export const useAuthStore = create<AuthState>()(
        * Sign in with Google OAuth
        */
       signInWithGoogle: async () => {
+        // Demo mode: instant success with demo user
+        if (isDemoModeActive()) {
+          console.log('[Auth] Demo mode: Google sign in with demo user');
+          set({
+            user: DEMO_SUPABASE_USER as unknown as SupabaseUser,
+            session: DEMO_SESSION as unknown as Session,
+            profile: DEMO_APP_USER,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+          return { success: true };
+        }
+
         set({ isLoading: true });
         const result = await signInWithGoogle();
         if (!result.success) {
@@ -200,6 +260,19 @@ export const useAuthStore = create<AuthState>()(
        * Sign out
        */
       signOut: async () => {
+        // Demo mode: just clear state
+        if (isDemoModeActive()) {
+          console.log('[Auth] Demo mode: sign out');
+          set({
+            user: null,
+            session: null,
+            profile: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+          return { success: true };
+        }
+
         set({ isLoading: true });
         const result = await apiSignOut();
         return result;

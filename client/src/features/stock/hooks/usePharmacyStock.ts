@@ -3,11 +3,14 @@
  *
  * React Query hook for fetching medicine stock for a specific pharmacy.
  * Includes real-time subscription for live updates.
+ * Supports demo mode for offline presentations.
  */
 
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase, subscribeToPharmacyStock } from '@/lib/supabase';
+import { isDemoModeActive } from '@/stores/useDevToolsStore';
+import { demoGetPharmacyStock } from '@/lib/demo';
 import { pharmacyKeys } from '@/features/pharmacy/hooks/useNearbyPharmacies';
 import type { MedicineStock, PharmacyStockSummary } from '../types';
 import type { StockStatus } from '@/types/pharmacy';
@@ -103,6 +106,35 @@ function calculateSummary(
 // =============================================================================
 
 async function fetchPharmacyStock(pharmacyId: string): Promise<MedicineStock[]> {
+  // Check if demo mode is active
+  if (isDemoModeActive()) {
+    console.log('[fetchPharmacyStock] Demo mode active, using mock data');
+    const demoData = await demoGetPharmacyStock(pharmacyId);
+    
+    return demoData.map((row, index): MedicineStock => ({
+      id: `${row.medicine_id}-${index}`,
+      medicineId: row.medicine_id,
+      medicineName: row.brand_name || row.generic_name || 'Unknown Medicine',
+      genericName: row.generic_name ?? undefined,
+      brandName: row.brand_name ?? undefined,
+      dosage: undefined,
+      formulation: undefined,
+      status: row.status,
+      price: row.price ?? undefined,
+      lastReportedAt: row.created_at,
+      reportCount: 1,
+      verifiedCount: row.helpful_count,
+      reportedBy: row.reported_by
+        ? {
+            id: row.reported_by,
+            displayName: row.reporter_name ?? 'Demo Contributor',
+            avatarUrl: undefined,
+            alayLevel: undefined,
+          }
+        : undefined,
+    }));
+  }
+
   // Use RPC function that joins inventory reports with medicines
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any).rpc('get_pharmacy_stock', {
@@ -148,8 +180,10 @@ export function usePharmacyStock({
     retry: 2,
   });
 
-  // Real-time subscription for stock updates
+  // Real-time subscription for stock updates (skip in demo mode)
   useEffect(() => {
+    // Skip realtime in demo mode
+    if (isDemoModeActive()) return;
     if (!realtime || !pharmacyId || !enabled) return;
 
     const unsubscribe = subscribeToPharmacyStock(pharmacyId, (payload) => {

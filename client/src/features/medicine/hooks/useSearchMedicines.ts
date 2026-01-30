@@ -3,10 +3,13 @@
  *
  * TanStack Query hook for searching medicines using Supabase full-text search.
  * Uses the search_medicines RPC function for weighted, ranked results.
+ * Supports demo mode for offline presentations.
  */
 
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '~lib/supabase';
+import { isDemoModeActive } from '~stores/useDevToolsStore';
+import { demoSearchMedicines } from '~lib/demo';
 import type { MedicineSearchResult } from '~types/database';
 
 // =============================================================================
@@ -54,6 +57,24 @@ async function searchMedicines(
   query: string,
   limit: number
 ): Promise<MedicineSearchResult[]> {
+  // Check if demo mode is active
+  if (isDemoModeActive()) {
+    console.log('[searchMedicines] Demo mode active, using mock data');
+    const demoData = await demoSearchMedicines(query, limit);
+    
+    // Transform to MedicineSearchResult format
+    return demoData.map((m) => ({
+      id: m.id,
+      brand_name: m.brand_name,
+      generic_name: m.generic_name,
+      dosage: m.dosage,
+      form: m.form as MedicineSearchResult['form'],
+      category: m.category as MedicineSearchResult['category'],
+      requires_prescription: m.requires_prescription,
+      rank: m.rank,
+    }));
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any).rpc('search_medicines', {
     search_query: query,

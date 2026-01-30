@@ -3,12 +3,15 @@
  *
  * TanStack Query hook for fetching user's Alay profile data:
  * points, level, streak, contributions, and badges.
+ * Supports demo mode for offline presentations.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { isDemoModeActive } from '@/stores/useDevToolsStore';
+import { demoGetUserProfile } from '@/lib/demo';
 import type { UserLevel, UserBadge } from '@/types/user';
 import { LEVEL_THRESHOLDS } from '../constants';
 
@@ -74,6 +77,24 @@ export const alayProfileKeys = {
 // =============================================================================
 
 async function fetchAlayProfile(): Promise<AlayProfile | null> {
+  // Check if demo mode is active
+  if (isDemoModeActive()) {
+    console.log('[fetchAlayProfile] Demo mode active, using mock data');
+    const demoProfile = await demoGetUserProfile();
+    
+    return {
+      alayPoints: demoProfile.alay_points,
+      streakDays: demoProfile.streak_days,
+      contributionCount: demoProfile.contribution_count,
+      level: demoProfile.level,
+      lastContributionAt: new Date().toISOString(),
+      helpfulVotes: 15,
+      badges: demoProfile.badges.map((b: string) => ({ id: b, name: b, description: '' })) as UserBadge[],
+      rankPosition: 6,
+      rankPercentile: 'Top 10%',
+    };
+  }
+
   // Get current user
   const {
     data: { user },
@@ -85,7 +106,6 @@ async function fetchAlayProfile(): Promise<AlayProfile | null> {
   }
 
   // Fetch profile data
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile, error: profileError } = await (supabase as any)
     .from('profiles')
     .select(
@@ -106,7 +126,6 @@ async function fetchAlayProfile(): Promise<AlayProfile | null> {
   }
 
   // Fetch helpful votes count (reports that were verified/upvoted)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { count: helpfulVotes } = await (supabase as any)
     .from('inventory_reports')
     .select('*', { count: 'exact', head: true })
@@ -114,7 +133,6 @@ async function fetchAlayProfile(): Promise<AlayProfile | null> {
     .eq('status', 'in_stock');
 
   // Fetch user rank position
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rankData } = await (supabase as any)
     .from('profiles')
     .select('id')

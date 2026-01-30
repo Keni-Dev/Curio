@@ -7,6 +7,8 @@
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { isDemoModeActive } from '@/stores/useDevToolsStore';
+import { demoExtractPrescription } from '@/lib/demo';
 import type {
   OCRResult,
   OCRServiceResponse,
@@ -39,11 +41,11 @@ const VISION_MODELS = [
  * Verified from OpenRouter API - comprehensive fallback list
  */
 const TEXT_MODELS = [
+  'liquid/lfm-2.5-1.2b-instruct:free',           // Fallback 9 - LiquidAI (smallest, fastest)
   'nvidia/nemotron-nano-9b-v2:free',             // Fallback 3 - NVIDIA Nemotron
   'openai/gpt-oss-20b:free',                     // Fallback 5 - OpenAI OSS
   'deepseek/deepseek-r1-0528:free',              // Fallback 7 - DeepSeek R1
   'z-ai/glm-4.5-air:free',                       // Fallback 8 - GLM 4.5
-  'liquid/lfm-2.5-1.2b-instruct:free',           // Fallback 9 - LiquidAI (smallest, fastest)
   'moonshotai/kimi-k2:free',                     // Fallback 6 - Kimi K2
   'meta-llama/llama-3.3-70b-instruct:free',      // Primary - Llama 3.3 70B
   'meta-llama/llama-3.1-405b-instruct:free',     // Fallback 1 - Llama 3.1 405B (largest)
@@ -717,9 +719,34 @@ async function parseMedicinesWithAI(rawText: string, retries = 1): Promise<Parse
  * Process an image through the OCR service (2-stage pipeline)
  * Stage 1: Vision model extracts raw text from image
  * Stage 2: Text model parses and separates medicine names from dosages
+ * Supports demo mode with pre-scripted results.
  */
 async function processImage(imageDataUrl: string): Promise<OCRResult> {
   const startTime = Date.now();
+
+  // Check if demo mode is active
+  if (isDemoModeActive()) {
+    console.log('[OCR] Demo mode active, using pre-scripted results');
+    const demoResult = await demoExtractPrescription(imageDataUrl);
+    const processingTimeMs = Date.now() - startTime;
+    
+    return {
+      rawText: demoResult.rawText,
+      isMedicalPrescription: demoResult.isPrescription,
+      medicines: demoResult.medicines.map((m) => ({
+        id: generateExtractedMedicineId(),
+        rawText: `${m.name}${m.dosage ? ' ' + m.dosage : ''}`,
+        normalizedName: m.name,
+        confidence: m.confidence,
+        confidenceLevel: getConfidenceLevel(m.confidence),
+        dosage: m.dosage,
+        isSelected: m.confidence >= 0.7,
+        isEdited: false,
+      })),
+      processingTimeMs,
+      extractedAt: new Date(),
+    };
+  }
 
   try {
     // Stage 1: Extract raw text from image using vision model

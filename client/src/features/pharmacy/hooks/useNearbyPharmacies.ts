@@ -3,10 +3,13 @@
  *
  * React Query hook for fetching nearby pharmacies from Supabase.
  * Uses the find_nearby_pharmacies RPC function with PostGIS.
+ * Supports demo mode for offline presentations.
  */
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '~lib/supabase';
+import { isDemoModeActive } from '~stores/useDevToolsStore';
+import { demoFindNearbyPharmacies } from '~lib/demo';
 import type { Coordinates } from '~types/common';
 import type { PharmacyWithStock, StockStatus, PharmacyType } from '~types/pharmacy';
 
@@ -115,63 +118,192 @@ function transformPharmacy(row: NearbyPharmacyRow): PharmacyWithStock {
 // FETCH FUNCTION
 // =============================================================================
 
-// Timeout for fetch requests (15 seconds)
-const FETCH_TIMEOUT_MS = 15000;
-
 // Type for Supabase RPC response
 interface SupabaseRpcResponse<T> {
   data: T | null;
   error: { message: string } | null;
 }
 
+// Type for demo data row
+interface DemoPharmacyRow {
+  id: string;
+  name: string;
+  slug: string;
+  lat: number;
+  lng: number;
+  address: string;
+  city: string;
+  phone: string | null;
+  type: string;
+  chain_name: string | null;
+  operating_hours: Record<string, string> | null;
+  is_24_hours: boolean;
+  is_verified: boolean;
+  logo_url: string | null;
+  rating: number | null;
+  total_reports: number;
+  distance_meters: number;
+}
+
+interface PharmacyTableRow {
+  id: string;
+  name: string;
+  slug: string;
+  address: string;
+  city: string;
+  phone: string | null;
+  type: PharmacyType;
+  chain_name: string | null;
+  operating_hours: Record<string, string> | null;
+  is_24_hours: boolean;
+  is_verified: boolean;
+  logo_url: string | null;
+  rating: number | null;
+  total_reports: number;
+}
+
 /**
- * Wraps a promise with a timeout
+ * Fallback: fetch pharmacies directly from table (without PostGIS distance calculation)
  */
-function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => 
-      setTimeout(() => reject(new Error(errorMessage)), ms)
-    ),
-  ]);
+async function fetchPharmaciesFallback(): Promise<PharmacyWithStock[]> {
+  console.log('[fetchPharmaciesFallback] Using fallback query...');
+  const startTime = Date.now();
+  
+  const { data, error } = await supabase
+    .from('pharmacies')
+    .select('id, name, slug, address, city, phone, type, chain_name, operating_hours, is_24_hours, is_verified, logo_url, rating, total_reports')
+    .limit(20);
+  
+  console.log('[fetchPharmaciesFallback] Query completed in', Date.now() - startTime, 'ms');
+
+  if (error) {
+    console.error('[fetchPharmaciesFallback] Error:', error);
+    throw new Error(error.message);
+  }
+
+  console.log('[fetchPharmaciesFallback] Got data:', data?.length ?? 0, 'pharmacies');
+
+  if (!data || !Array.isArray(data)) {
+    return [];
+  }
+
+  // Transform without distance (since we can't calculate without PostGIS)
+  return (data as PharmacyTableRow[]).map((row): PharmacyWithStock => {
+    const stockStatuses = ['in_stock', 'low_stock', 'out_of_stock'] as const;
+    const mockStockIndex = Math.abs(row.name.charCodeAt(0)) % 3;
+
+    return {
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      location: {
+        lat: 14.8527, // Default to center (we don't have location without PostGIS)
+        lng: 120.815,
+      },
+      address: row.address,
+      city: row.city,
+      phone: row.phone ?? undefined,
+      type: row.type,
+      chainName: row.chain_name ?? undefined,
+      operatingHours: row.operating_hours ?? undefined,
+      is24Hours: row.is_24_hours,
+      isVerified: row.is_verified,
+      logoUrl: row.logo_url ?? undefined,
+      distance: undefined, // No distance without PostGIS
+      rating: row.rating ?? undefined,
+      totalReports: row.total_reports,
+      stockStatus: stockStatuses[mockStockIndex] as StockStatus,
+      lastReportedAt: new Date(Date.now() - Math.random() * 3600000 * 2).toISOString(),
+      reportCount: row.total_reports,
+    };
+  });
 }
 
 async function fetchNearbyPharmacies(
   center: Coordinates,
   radiusMeters: number
 ): Promise<PharmacyWithStock[]> {
+  // Check if demo mode is active
+  if (isDemoModeActive()) {
+    console.log('[fetchNearbyPharmacies] Demo mode active, using mock data');
+    const demoData = await demoFindNearbyPharmacies(center.lat, center.lng, radiusMeters);
+    
+    // Transform demo data to PharmacyWithStock format
+    return (demoData as DemoPharmacyRow[]).map((row): PharmacyWithStock => {
+      const stockStatuses = ['in_stock', 'low_stock', 'out_of_stock'] as const;
+      const mockStockIndex = Math.abs(row.name.charCodeAt(0)) % 3;
+
+      return {
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        location: {
+          lat: row.lat,
+          lng: row.lng,
+        },
+        address: row.address,
+        city: row.city,
+        phone: row.phone ?? undefined,
+        type: row.type as PharmacyType,
+        chainName: row.chain_name ?? undefined,
+        operatingHours: row.operating_hours ?? undefined,
+        is24Hours: row.is_24_hours,
+        isVerified: row.is_verified,
+        logoUrl: row.logo_url ?? undefined,
+        distance: row.distance_meters,
+        rating: row.rating ?? undefined,
+        totalReports: row.total_reports,
+        stockStatus: stockStatuses[mockStockIndex] as StockStatus,
+        lastReportedAt: new Date(Date.now() - Math.random() * 3600000 * 2).toISOString(),
+        reportCount: row.total_reports,
+      };
+    });
+  }
+
   console.log('[fetchNearbyPharmacies] Fetching pharmacies...', { center, radiusMeters });
   
   try {
+    // Try the RPC function first (uses PostGIS for distance)
+    console.log('[fetchNearbyPharmacies] Starting RPC call...');
+    const startTime = Date.now();
+    
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rpcPromise = (supabase as any).rpc('find_nearby_pharmacies', {
+    const rpcResult = await (supabase as any).rpc('find_nearby_pharmacies', {
       user_lat: center.lat,
       user_lng: center.lng,
       radius_meters: radiusMeters,
-    }) as Promise<SupabaseRpcResponse<NearbyPharmacyRow[]>>;
-
-    const { data, error } = await withTimeout(
-      rpcPromise,
-      FETCH_TIMEOUT_MS,
-      'Request timed out. Please check your connection and try again.'
-    );
+    });
+    
+    console.log('[fetchNearbyPharmacies] RPC completed in', Date.now() - startTime, 'ms');
+    
+    const { data, error } = rpcResult as SupabaseRpcResponse<NearbyPharmacyRow[]>;
 
     if (error) {
-      console.error('[fetchNearbyPharmacies] Supabase error:', error);
-      throw new Error(error.message || 'Failed to fetch pharmacies');
+      console.error('[fetchNearbyPharmacies] Supabase RPC error:', error);
+      // Try fallback
+      console.log('[fetchNearbyPharmacies] Attempting fallback...');
+      return await fetchPharmaciesFallback();
     }
 
     console.log('[fetchNearbyPharmacies] Got data:', data?.length ?? 0, 'pharmacies');
 
     if (!data || !Array.isArray(data)) {
-      console.warn('[fetchNearbyPharmacies] No data returned or invalid format');
-      return [];
+      console.warn('[fetchNearbyPharmacies] No data returned, trying fallback...');
+      return await fetchPharmaciesFallback();
     }
 
     return (data as NearbyPharmacyRow[]).map(transformPharmacy);
   } catch (err) {
-    console.error('[fetchNearbyPharmacies] Fetch failed:', err);
-    throw err;
+    console.error('[fetchNearbyPharmacies] RPC failed:', err);
+    
+    // Try fallback on any error
+    try {
+      console.log('[fetchNearbyPharmacies] Attempting fallback after error...');
+      return await fetchPharmaciesFallback();
+    } catch (fallbackErr) {
+      console.error('[fetchNearbyPharmacies] Fallback also failed:', fallbackErr);
+      throw new Error('Unable to load pharmacies. Please check your connection.');
+    }
   }
 }
 

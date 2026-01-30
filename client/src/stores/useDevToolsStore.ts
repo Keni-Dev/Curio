@@ -5,6 +5,7 @@
  * - Mock location override
  * - Proximity check bypass
  * - Debug mode toggles
+ * - Demo mode for offline presentations
  */
 
 import { create } from 'zustand';
@@ -15,6 +16,12 @@ import type { Coordinates } from '~types/common';
 const BULSU_LIBRARY_COORDS: Coordinates = {
   lat: 14.858427,
   lng: 120.813601,
+};
+
+// Default demo location: Malolos City Center
+const MALOLOS_CENTER_COORDS: Coordinates = {
+  lat: 14.8527,
+  lng: 120.815,
 };
 
 // =============================================================================
@@ -31,6 +38,10 @@ interface DevToolsState {
 
   // Panel visibility
   isDevPanelOpen: boolean;
+
+  // Demo Mode (Offline)
+  isDemoModeEnabled: boolean;
+  isDemoAuthEnabled: boolean;
 }
 
 interface DevToolsActions {
@@ -45,6 +56,12 @@ interface DevToolsActions {
   // Panel
   toggleDevPanel: () => void;
   setDevPanelOpen: (open: boolean) => void;
+
+  // Demo Mode
+  setDemoModeEnabled: (enabled: boolean) => void;
+  setDemoAuthEnabled: (enabled: boolean) => void;
+  enableFullDemoMode: () => void;
+  disableFullDemoMode: () => void;
 
   // Reset
   resetDevTools: () => void;
@@ -61,6 +78,8 @@ const initialState: DevToolsState = {
   mockLocation: BULSU_LIBRARY_COORDS,
   bypassProximityCheck: false,
   isDevPanelOpen: false,
+  isDemoModeEnabled: false,
+  isDemoAuthEnabled: false,
 };
 
 // =============================================================================
@@ -95,6 +114,35 @@ export const useDevToolsStore = create<DevToolsStore>()(
         setDevPanelOpen: (open) =>
           set({ isDevPanelOpen: open }, false, 'setDevPanelOpen'),
 
+        setDemoModeEnabled: (enabled) =>
+          set({ isDemoModeEnabled: enabled }, false, 'setDemoModeEnabled'),
+
+        setDemoAuthEnabled: (enabled) =>
+          set({ isDemoAuthEnabled: enabled }, false, 'setDemoAuthEnabled'),
+
+        enableFullDemoMode: () =>
+          set(
+            {
+              isDemoModeEnabled: true,
+              isDemoAuthEnabled: true,
+              isMockLocationEnabled: true,
+              mockLocation: MALOLOS_CENTER_COORDS,
+              bypassProximityCheck: true,
+            },
+            false,
+            'enableFullDemoMode'
+          ),
+
+        disableFullDemoMode: () =>
+          set(
+            {
+              isDemoModeEnabled: false,
+              isDemoAuthEnabled: false,
+            },
+            false,
+            'disableFullDemoMode'
+          ),
+
         resetDevTools: () => set(initialState, false, 'resetDevTools'),
       }),
       {
@@ -118,9 +166,21 @@ export const selectMockLocation = (state: DevToolsStore) => ({
 
 export const selectBypassProximity = (state: DevToolsStore) => state.bypassProximityCheck;
 
+export const selectDemoMode = (state: DevToolsStore) => ({
+  isEnabled: state.isDemoModeEnabled,
+  isAuthEnabled: state.isDemoAuthEnabled,
+});
+
 // =============================================================================
 // DEV-ONLY EXPORTS
 // =============================================================================
 
 // Helper to check if dev tools should be active
 export const isDevMode = () => import.meta.env.DEV;
+
+// Helper to check if demo mode is active (env or store)
+export const isDemoModeActive = () => {
+  const envDemo = import.meta.env.VITE_DEMO_MODE === 'true';
+  const storeDemo = useDevToolsStore.getState().isDemoModeEnabled;
+  return envDemo || storeDemo;
+};

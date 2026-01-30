@@ -32,10 +32,15 @@ function DevToolsPanelContent() {
     mockLocation,
     bypassProximityCheck,
     isDevPanelOpen,
+    isDemoModeEnabled,
+    isDemoAuthEnabled,
     setMockLocationEnabled,
     setMockLocation,
     setBypassProximityCheck,
     toggleDevPanel,
+    setDemoAuthEnabled,
+    enableFullDemoMode,
+    disableFullDemoMode,
   } = useDevToolsStore();
 
   const [customLat, setCustomLat] = useState(mockLocation.lat.toString());
@@ -47,7 +52,7 @@ function DevToolsPanelContent() {
     if (!isNaN(lat) && !isNaN(lng)) {
       setMockLocation({ lat, lng });
     }
-  };
+  };  
 
   return (
     <>
@@ -200,6 +205,95 @@ function DevToolsPanelContent() {
                   />
                 </button>
               </label>
+            </div>
+
+            {/* Demo Mode Section */}
+            <div className="pt-3 border-t border-slate-700 space-y-3">
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                🎭 Demo Mode (Offline)
+              </p>
+
+              {/* Full Demo Mode Toggle */}
+              <div className="space-y-2">
+                <label className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium">Full Demo Mode</span>
+                    <p className="text-xs text-slate-400">Use mock data, skip auth & APIs</p>
+                  </div>
+                  <button
+                    onClick={() => isDemoModeEnabled ? disableFullDemoMode() : enableFullDemoMode()}
+                    className={cn(
+                      'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                      isDemoModeEnabled ? 'bg-purple-500' : 'bg-slate-600'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'inline-block size-4 transform rounded-full bg-white transition-transform',
+                        isDemoModeEnabled ? 'translate-x-6' : 'translate-x-1'
+                      )}
+                    />
+                  </button>
+                </label>
+
+                {isDemoModeEnabled && (
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
+                    <p className="text-xs text-purple-300 mb-2">
+                      ✅ Demo mode active! Features:
+                    </p>
+                    <ul className="text-xs text-purple-200 space-y-1">
+                      <li>• Mock pharmacy & medicine data</li>
+                      <li>• Demo user auto-login</li>
+                      <li>• Pre-scripted AI responses</li>
+                      <li>• No internet required</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Individual Demo Toggles */}
+              {isDemoModeEnabled && (
+                <div className="space-y-2 pl-2 border-l-2 border-slate-700">
+                  <label className="flex items-center justify-between">
+                    <span className="text-sm text-slate-300">Demo Auth</span>
+                    <button
+                      onClick={() => setDemoAuthEnabled(!isDemoAuthEnabled)}
+                      className={cn(
+                        'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
+                        isDemoAuthEnabled ? 'bg-purple-400' : 'bg-slate-600'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'inline-block size-3 transform rounded-full bg-white transition-transform',
+                          isDemoAuthEnabled ? 'translate-x-5' : 'translate-x-1'
+                        )}
+                      />
+                    </button>
+                  </label>
+                </div>
+              )}
+
+              {/* Quick Demo Actions */}
+              {isDemoModeEnabled && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setMockLocation({ lat: 14.8374, lng: 120.9608 });
+                      setMockLocationEnabled(true);
+                    }}
+                    className="flex-1 py-2 px-3 rounded-lg bg-purple-500/20 text-purple-300 text-xs font-medium hover:bg-purple-500/30 transition-colors"
+                  >
+                    📍 Go to Malolos
+                  </button>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="flex-1 py-2 px-3 rounded-lg bg-slate-700 text-slate-300 text-xs font-medium hover:bg-slate-600 transition-colors"
+                  >
+                    🔄 Reload App
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Instructions */}

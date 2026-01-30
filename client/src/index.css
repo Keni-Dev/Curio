@@ -478,6 +478,10 @@ body {
   display: none;
 }
 
+.pharmacy-popup .leaflet-popup-content a {
+  color: white !important;
+}
+
 /* Leaflet attribution styling */
 .leaflet-control-attribution {
   font-size: 10px;

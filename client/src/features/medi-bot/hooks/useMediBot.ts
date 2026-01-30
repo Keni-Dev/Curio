@@ -1,10 +1,13 @@
 /**
  * useMediBot Hook
  * Custom hook for managing chat with Gemini API (primary) and OpenRouter fallback
+ * Supports demo mode for offline presentations with pre-scripted responses.
  */
 
 import { useState, useCallback, useRef } from 'react';
 import type { Message } from '../types';
+import { isDemoModeActive } from '@/stores/useDevToolsStore';
+import { demoGenerateBotResponse, generateDemoMessageId } from '@/lib/demo';
 import {
   GEMINI_CONFIG,
   OPENROUTER_CONFIG,
@@ -216,16 +219,22 @@ export function useMediBot(): UseMediBotReturn {
 
       let assistantContent: string;
 
-      // Use OpenRouter directly
-      console.log('[Medi-Bot] Using OpenRouter...');
-      assistantContent = await callOpenRouterAPI(
-        conversationMessages,
-        abortControllerRef.current.signal
-      );
+      // Check if demo mode is active
+      if (isDemoModeActive()) {
+        console.log('[Medi-Bot] Demo mode active, using pre-scripted responses');
+        assistantContent = await demoGenerateBotResponse(content.trim(), conversationMessages);
+      } else {
+        // Use OpenRouter directly
+        console.log('[Medi-Bot] Using OpenRouter...');
+        assistantContent = await callOpenRouterAPI(
+          conversationMessages,
+          abortControllerRef.current.signal
+        );
+      }
 
       // Create assistant message
       const assistantMessage: Message = {
-        id: generateId(),
+        id: isDemoModeActive() ? generateDemoMessageId() : generateId(),
         role: 'assistant',
         content: assistantContent,
         timestamp: new Date(),

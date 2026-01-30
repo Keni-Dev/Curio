@@ -3,12 +3,15 @@
  *
  * TanStack Query hook for fetching leaderboard data.
  * Supports different time ranges and sorting options.
+ * Supports demo mode for offline presentations.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { isDemoModeActive } from '@/stores/useDevToolsStore';
+import { demoGetLeaderboard, type DemoProfile } from '@/lib/demo';
 import type { LeaderboardEntry, UserLevel } from '@/types/user';
 import { LEVEL_THRESHOLDS } from '../constants';
 
@@ -72,8 +75,23 @@ async function fetchLeaderboard(
   void _timeRange; // Reserved for future contributions table filtering
   void _city; // Reserved for future city filtering
 
+  // Check if demo mode is active
+  if (isDemoModeActive()) {
+    console.log('[fetchLeaderboard] Demo mode active, using mock data');
+    const demoData = await demoGetLeaderboard(limit);
+    
+    return demoData.map((profile: DemoProfile, index: number) => ({
+      rank: index + 1,
+      userId: profile.id,
+      displayName: profile.display_name,
+      avatarUrl: profile.avatar_url ?? undefined,
+      alayPoints: profile.alay_points,
+      level: profile.level,
+      contributionCount: profile.contribution_count,
+    }));
+  }
+
   // Build query
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const query = (supabase as any)
     .from('profiles')
     .select(

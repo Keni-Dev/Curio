@@ -3,10 +3,13 @@
  *
  * Fetches pharmacies that have stock for a specific medicine.
  * Returns pharmacy details with stock status, price, and distance.
+ * Supports demo mode for offline presentations.
  */
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '~lib/supabase';
+import { isDemoModeActive } from '~stores/useDevToolsStore';
+import { demoGetPharmaciesWithMedicine, type PharmacyWithMedicineResult } from '~lib/demo';
 import type { StockStatus } from '~types/database';
 
 // =============================================================================
@@ -92,6 +95,32 @@ async function fetchPharmaciesWithMedicine(
   userLng: number,
   radiusMeters: number
 ): Promise<PharmacyWithMedicineStock[]> {
+  // Check if demo mode is active
+  if (isDemoModeActive()) {
+    console.log('[fetchPharmaciesWithMedicine] Demo mode active, using demo data');
+    const demoData = await demoGetPharmaciesWithMedicine(medicineId, userLat, userLng, radiusMeters);
+    
+    // Transform demo data to PharmacyWithMedicineStock format
+    return demoData.map((row: PharmacyWithMedicineResult) => ({
+      id: row.pharmacy_id,
+      name: row.pharmacy_name,
+      slug: row.pharmacy_slug,
+      address: row.address,
+      city: row.city,
+      phone: row.phone,
+      type: row.pharmacy_type,
+      chainName: row.chain_name,
+      is24Hours: row.is_24_hours,
+      isVerified: row.is_verified,
+      logoUrl: row.logo_url,
+      distanceMeters: row.distance_meters,
+      stockStatus: row.stock_status,
+      price: row.price,
+      lastReportedAt: row.last_reported_at,
+      reportCount: row.report_count,
+    }));
+  }
+
   // Use the RPC function to get pharmacies with medicine availability
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any).rpc('get_pharmacies_with_medicine', {
