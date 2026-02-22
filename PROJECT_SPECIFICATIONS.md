@@ -12,7 +12,6 @@
 | Document | Purpose |
 |----------|---------|
 | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | **Canonical visual reference** — colors, typography, components |
-| [prompts/00_MASTER_INDEX.md](prompts/00_MASTER_INDEX.md) | Implementation guide with step-by-step prompts |
 | `/references/` folder | HTML prototypes for visual inspiration |
 
 ---
